@@ -63,6 +63,7 @@ const getTimestampFromRange = (range: string): string => {
 const TremorDashboard: FC = () => {
   const [data, setData] = useState<DataPoint[]>([]);
   const [aggData, setAggData] = useState<{ period: string; avg: number }[]>([]);
+  const [aggProba, setAggProba] = useState<{ period: string; avg: number }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [timestamp, setTimestamp] = useState<string | null>(null);
@@ -268,126 +269,163 @@ const TremorDashboard: FC = () => {
   }
 
   return (
-    <div className="p-4">
-      <h2 className="text-lg mb-4">
-        Dati da: <strong>{timestamp.replace('T', ' ').replace(/-/g, ':')}</strong>
-      </h2>
-      {/* Tremor Power */}
-      <section className="h-72 mb-8">
-        <h3 className="mb-2">
-          Tremor Power{' '}
-          {rangeKey === '1d'
-            ? 'over Time'
-            : rangeKey === '7d'
-            ? 'media giornaliera'
-            : rangeKey === '1m'
-            ? 'media settimanale'
-            : 'media mensile'}
-        </h3>
-        <div style={styles.graphDiv}>
-          <ResponsiveContainer>
-            {rangeKey === '1d' ? (
-              <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="time"
-                  type="number"
-                  domain={[parsedStart!, Date.now()]}
-                  tickFormatter={timeFormatter}
-                />
-                <YAxis />
-                <Tooltip labelFormatter={timeFormatter} />
-                <Line
-                  type="monotone"
-                  dataKey="tremor_power"
-                  dot={false}
-                  strokeWidth={2}
-                />
-                <ReferenceLine
-                  y={
-                    data
-                      .filter(d => (d.tremor_power ?? 0) > parseFloat(threshold))
-                      .reduce((sum, d) => sum + (d.tremor_power ?? 0), 0) /
-                    Math.max(
-                      1,
-                      data.filter(d => (d.tremor_power ?? 0) > parseFloat(threshold))
-                        .length
-                    )
-                  }
-                  stroke="red"
-                  strokeDasharray="6 6"
-                  label={{
-                    value: `Media > ${threshold}`,
-                    position: 'right',
-                    fill: 'red',
-                  }}
-                />
-              </LineChart>
-            ) : (
-              <BarChart data={aggData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="period" />
-                <YAxis />
-                <Tooltip formatter={(v: number) => v.toFixed(4)} />
-                <Bar dataKey="avg" />
-              </BarChart>
-            )}
-          </ResponsiveContainer>
-        </div>
-      </section>
-      {/* Tremor Probability */}
-      <section className="h-72 mb-8">
-        <h3 className="mb-2">Tremor Probability over Time</h3>
-        <div style={styles.graphDiv}>
-          <ResponsiveContainer>
+  <div className="p-4">
+    <h2 className="text-lg mb-4">
+      Dati da: <strong>{timestamp.replace('T', ' ').replace(/-/g, ':')}</strong>
+    </h2>
+
+    {/* Tremor Power */}
+    <section className="h-72 mb-8">
+      <h3 className="mb-2">
+        Tremor Power{' '}
+        {rangeKey === '1d'
+          ? 'over Time'
+          : rangeKey === '7d'
+          ? 'media giornaliera'
+          : rangeKey === '1m'
+          ? 'media settimanale'
+          : 'media mensile'}
+      </h3>
+      <div style={styles.graphDiv}>
+        <ResponsiveContainer>
+          {rangeKey === '1d' ? (
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid {...styles.grid} />
               <XAxis
                 dataKey="time"
                 type="number"
-                domain={["dataMin", "dataMax"]}
+                domain={[parsedStart!, Date.now()]}
                 tickFormatter={timeFormatter}
+                {...styles.axis}
               />
-              <YAxis
-                domain={[
-                  0,
-                  Math.max(...data.map(d => d.pred_tremor_proba ?? 0)) * 1.2,
-                ]}
-              />
-              <Tooltip
-                labelFormatter={timeFormatter}
-                formatter={(v: number) => v.toFixed(3)}
-              />
+              <YAxis {...styles.axis} />
+              <Tooltip {...styles.tooltip} labelFormatter={timeFormatter} />
               <Line
                 type="monotone"
-                dataKey="pred_tremor_proba"
+                dataKey="tremor_power"
                 dot={false}
                 strokeWidth={2}
               />
+              <ReferenceLine
+                y={
+                  data
+                    .filter(d => (d.tremor_power ?? 0) > parseFloat(threshold))
+                    .reduce((s, d) => s + (d.tremor_power ?? 0), 0) /
+                  Math.max(
+                    1,
+                    data.filter(d => (d.tremor_power ?? 0) > parseFloat(threshold))
+                      .length
+                  )
+                }
+                stroke="red"
+                strokeDasharray="6 6"
+                label={{
+                  value: `Media > ${threshold}`,
+                  position: 'right',
+                  fill: 'red',
+                }}
+              />
             </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
-      {/* Arm at Rest */}
-      <section className="h-52">
-        <h3 className="mb-2">Arm at Rest Over Time</h3>
-        <div style={styles.graphDiv}>
-          <ResponsiveContainer>
+          ) : (
+            <BarChart data={aggData} barGap={styles.barChartContainer.barGap}>
+              <defs>
+                <linearGradient
+                  id={styles.barDefGradient.id}
+                  x1={styles.barDefGradient.x1}
+                  y1={styles.barDefGradient.y1}
+                  x2={styles.barDefGradient.x2}
+                  y2={styles.barDefGradient.y2}
+                >
+                  {styles.barDefGradient.stops.map((stop, i) => (
+                    <stop
+                      key={i}
+                      offset={stop.offset}
+                      stopColor={stop.stopColor}
+                      stopOpacity={stop.stopOpacity}
+                    />
+                  ))}
+                </linearGradient>
+              </defs>
+              <CartesianGrid {...styles.grid} />
+              <XAxis dataKey="period" {...styles.axis} />
+              <YAxis {...styles.axis} />
+              <Tooltip {...styles.tooltip} formatter={(v: number) => v.toFixed(4)} />
+              <Bar dataKey="avg" {...styles.bar} />
+            </BarChart>
+          )}
+        </ResponsiveContainer>
+      </div>
+    </section>
+
+    {/* Tremor Probability */}
+    {rangeKey === '1d' && (
+  <section className="h-72 mb-8">
+    <h3 className="mb-2">Tremor Probability over Time</h3>
+    <div style={styles.graphDiv}>
+      <ResponsiveContainer>
+        <LineChart data={data}>
+          <CartesianGrid {...styles.grid} />
+          <XAxis
+            dataKey="time"
+            type="number"
+            domain={['dataMin', 'dataMax']}
+            tickFormatter={timeFormatter}
+            {...styles.axis}
+          />
+          <YAxis
+            domain={[0, Math.max(...data.map(d => d.pred_tremor_proba ?? 0)) * 1.2]}
+            {...styles.axis}
+          />
+          <Tooltip
+            {...styles.tooltip}
+            labelFormatter={timeFormatter}
+            formatter={(v: number) => v.toFixed(3)}
+          />
+          <Line
+            type="monotone"
+            dataKey="pred_tremor_proba"
+            dot={false}
+            strokeWidth={2}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  </section>
+    )}
+
+    {/* Arm at Rest */}
+     {rangeKey === '1d' && (
+    <section className="h-52 mb-8">
+      <h3 className="mb-2">
+        Arm at Rest{' '}
+        {rangeKey === '1d'
+          ? 'over Time'
+          : rangeKey === '7d'
+          ? 'media giornaliera'
+          : rangeKey === '1m'
+          ? 'media settimanale'
+          : 'media mensile'}
+      </h3>
+      <div style={styles.graphDiv}>
+        <ResponsiveContainer>
             <ScatterChart>
-              <CartesianGrid strokeDasharray="3 3" />
+              <CartesianGrid {...styles.grid} />
               <XAxis
                 dataKey="time"
                 type="number"
-                domain={["dataMin", "dataMax"]}
+                domain={['dataMin', 'dataMax']}
                 tickFormatter={timeFormatter}
+                {...styles.axis}
               />
               <YAxis
                 dataKey="pred_arm_at_rest"
                 type="number"
                 domain={[0, 2]}
                 ticks={[0, 1, 2]}
+                {...styles.axis}
               />
               <Tooltip
+                {...styles.tooltip}
                 labelFormatter={timeFormatter}
                 formatter={(v: number) => v}
               />
@@ -408,19 +446,56 @@ const TremorDashboard: FC = () => {
                 }}
               />
             </ScatterChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
-    </div>
-  );
+          
+        </ResponsiveContainer>
+      </div>
+    </section>)}
+  </div>
+);
 };
 
 export default TremorDashboard;
+
+
+const radiusTuple: [number, number, number, number] = [8, 8, 0, 0];
 
 const styles = {
   graphDiv: {
     width: '100%',
     height: '18rem',
     marginTop: '0.5rem',
+  },
+  barChartContainer: {
+    barGap: '10%',
+  },
+  barDefGradient: {
+    id: 'grad',
+    x1: '0',
+    y1: '0',
+    x2: '0',
+    y2: '1',
+    stops: [
+      { offset: '0%', stopColor: '#68afeaff', stopOpacity: 0.8 },
+      { offset: '100%', stopColor: '#1f6095ff', stopOpacity: 0.2 },
+    ],
+  },
+  axis: {
+    tick: { fill: '#555', fontSize: 12 },
+    axisLine: { stroke: '#8884d8' },
+    tickLine: false,
+  },
+  grid: {
+    stroke: '#ccc',
+    strokeDasharray: '3 3',
+  },
+  tooltip: {
+    contentStyle: { backgroundColor: '#222', borderRadius: 4, padding: '8px' },
+    labelStyle: { color: '#fff', fontSize: 12 },
+    itemStyle: { color: '#fff' },
+  },
+  bar: {
+    barSize: 30,
+    radius: radiusTuple,
+    fill: 'url(#grad)',
   },
 };
