@@ -1,11 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-
-interface Patient {
-  id: string | number;
-  name: string;
-  status: 'critical' | 'warning' | 'stable' | string;
-}
+import { Patient } from '../types';
 
 interface PatientListProps {
   patients: Patient[];
@@ -29,15 +24,10 @@ const PatientList: React.FC<PatientListProps> = ({ patients }) => {
           <span
             style={{
               ...styles.status,
-              color:
-                p.status === 'critical'
-                  ? 'red'
-                  : p.status === 'warning'
-                  ? 'orange'
-                  : 'green',
+              color:'red'
+               
             }}
           >
-            {p.status}
           </span>
         </div>
       ))}

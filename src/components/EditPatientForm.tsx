@@ -3,14 +3,22 @@ import { Patient } from '../types';
 
 // Definiamo le props che il form riceverà
 interface EditPatientFormProps {
-  patient: Patient;
+  patient?: Patient;
   onSave: (updated: Patient) => void;
   onCancel: () => void;
 }
 
 const EditPatientForm: FC<EditPatientFormProps> = ({ patient, onSave, onCancel }) => {
-  const [formData, setFormData] = useState<Patient>({ ...patient });
-  const [trattiInput, setTrattiInput] = useState(formData.tratti_caratteristici.join(', '));
+const [formData, setFormData] = useState<Patient>(() => ({
+  id: patient?.id ?? '', // fallback a stringa vuota
+  name: patient?.name ?? '',
+  età: patient?.età ?? 0,
+  sesso: patient?.sesso ?? 'M',
+  peso: patient?.peso ?? 0,
+  altezza: patient?.altezza ?? 0,
+  tratti_caratteristici: patient?.tratti_caratteristici ?? [],
+  diagnosi: patient?.diagnosi ?? '',
+}));  const [trattiInput, setTrattiInput] = useState(formData.tratti_caratteristici.join(', '));
 
 const handleChange = (
   e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -39,6 +47,7 @@ const handleSubmit = (e: FormEvent) => {
       .map(s => s.trim())
       .filter(Boolean),
   });
+  onCancel(); 
 };
 
   return (
@@ -57,12 +66,13 @@ const handleSubmit = (e: FormEvent) => {
       <label style={styles.label}>
         Età:
         <input
-          type="number"
-          name="età"
-          value={formData.età}
-          onChange={handleChange}
-          style={styles.input}
-        />
+        type="number"
+        name="età"
+        value={formData.età}
+        onChange={handleChange}
+        style={{ ...styles.input, ...styles.noNumberArrows }}
+        inputMode="numeric"
+      />
       </label>
 
       <label style={styles.label}>
@@ -81,24 +91,29 @@ const handleSubmit = (e: FormEvent) => {
 
       <label style={styles.label}>
         Peso (kg):
-        <input
-          type="number"
-          name="peso"
-          value={formData.peso}
-          onChange={handleChange}
-          style={styles.input}
-        />
+        
+      <input
+        type="number"
+        name="peso"
+        value={formData.peso}
+        onChange={handleChange}
+        style={{ ...styles.input, ...styles.noNumberArrows }}
+        inputMode="numeric"
+      />
+
       </label>
 
       <label style={styles.label}>
         Altezza (cm):
-        <input
-          type="number"
-          name="altezza"
-          value={formData.altezza}
-          onChange={handleChange}
-          style={styles.input}
-        />
+       
+<input
+  type="number"
+  name="altezza"
+  value={formData.altezza}
+  onChange={handleChange}
+  style={{ ...styles.input, ...styles.noNumberArrows }}
+  inputMode="numeric"
+/>
       </label>
 
       <label style={styles.label}>
@@ -122,11 +137,10 @@ const handleSubmit = (e: FormEvent) => {
       </label>
 
       <div style={styles.buttonRow}>
-        <button type="submit"   style={{ ...styles.buttonBase, ...styles.primaryButton }}>
-          Salva
+        <button type="submit" style={{ ...styles.buttonBase, ...styles.primaryButton }}
+       > Salva
         </button>
-        <button type="button" onClick={onCancel}   style={{ ...styles.buttonBase, ...styles.secondaryButton }}
->
+        <button type="button" onClick={onCancel}   style={{ ...styles.buttonBase, ...styles.secondaryButton }}>
           Annulla
         </button>
       </div>
