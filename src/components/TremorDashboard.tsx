@@ -1,4 +1,4 @@
-import React, { useEffect, useState, FC } from 'react';
+import React, { useEffect, useState, useMemo, FC } from 'react';
 import JSZip from 'jszip';
 import {
   LineChart,
@@ -11,7 +11,8 @@ import {
   ResponsiveContainer,
   ScatterChart,
   Scatter,
-  
+  BarChart,
+  Bar,
 } from 'recharts';
 
 // Tipi per i dati
@@ -35,7 +36,8 @@ interface IMUMeta {
   sensors: SensorMeta[];
 }
 
-const timeFormatter = (ts:number) :string =>
+// Formatter per timestamp
+const timeFormatter = (ts: number): string =>
   new Intl.DateTimeFormat('it-IT', {
     hour: '2-digit',
     minute: '2-digit',
@@ -43,109 +45,85 @@ const timeFormatter = (ts:number) :string =>
     timeZone: 'Europe/Rome',
   }).format(new Date(ts));
 
-const getTimestampFromRange = (range:string):string => {
+// Genera timestamp ISO compatibile con il server (colons->hyphens)
+const getTimestampFromRange = (range: string): string => {
   const now = new Date();
-  let past = new Date();
-
+  const past = new Date();
   switch (range) {
-    case '1d':
-      past.setDate(now.getDate() - 1);
-      break;
-    case '7d':
-      past.setDate(now.getDate() - 7);
-      break;
-    case '1m':
-      past.setMonth(now.getMonth() - 1);
-      break;
-    case '6m':
-      past.setMonth(now.getMonth() - 6);
-      break;
-    case '1y':
-      past.setFullYear(now.getFullYear() - 1);
-      break;
-    default:
-      return '';
+    case '1d': past.setDate(now.getDate() - 1); break;
+    case '7d': past.setDate(now.getDate() - 7); break;
+    case '1m': past.setMonth(now.getMonth() - 1); break;
+    case '6m': past.setMonth(now.getMonth() - 6); break;
+    case '1y': past.setFullYear(now.getFullYear() - 1); break;
+    default: return '';
   }
-
-  return past.toISOString().replace(/:/g, '-').split('.')[0]; // formato compatibile con il tuo API
+  return past.toISOString().replace(/:/g, '-').split('.')[0];
 };
 
 const TremorDashboard: FC = () => {
   const [data, setData] = useState<DataPoint[]>([]);
+  const [aggData, setAggData] = useState<{ period: string; avg: number }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [timestamp, setTimestamp] = useState<string | null>(null);
+  const [rangeKey, setRangeKey] = useState<'1d' | '7d' | '1m' | '6m' | '1y' | ''>('');
   const [threshold, setThreshold] = useState<string>('');
 
+  // Parso correttamente il timestamp per ottenere startTime numerico
+  const parsedStart = useMemo<number | null>(() => {
+    if (!timestamp) return null;
+    const [datePart, timePart] = timestamp.split('T');
+    const iso = `${datePart}T${timePart.replace(/-/g, ':')}Z`;
+    const t = Date.parse(iso);
+    return isNaN(t) ? null : t;
+  }, [timestamp]);
+
   useEffect(() => {
-    if (!timestamp) return;
+    if (!timestamp || parsedStart === null) return;
     const load = async () => {
-      console.log('🔄 Starting data load');
-      setLoading(true);
-      setError(null);
-      setData([]);
+      setLoading(true); setError(null); setData([]);
       try {
-        // 1) Chiedi presigned URL
+        // 1) presign URL
         const presignUrl = `/api/inference/getPredictionZip?timestamp=${timestamp}`;
-        console.log('⏰ Timestamp inviato al server:', timestamp);
         const res1 = await fetch(presignUrl);
-      
-        console.log('📡 presignUrl:', presignUrl, '→', window.location.origin + presignUrl);
         if (!res1.ok) {
           const errText = await res1.text();
           throw new Error(`Errore presign (${res1.status}): ${errText}`);
         }
+        const { url: zipUrl } = await res1.json();
+        if (!zipUrl) throw new Error('Risposta invalida: manca il campo "url"');
 
-        const json = await res1.json();
-        const zipUrl = json.url;
-        if (!zipUrl) {
-          throw new Error('Risposta invalida: manca il campo "url"');
-        }
-
-       console.log('➡️ Downloading ZIP from:', zipUrl);
-        const res2 = await fetch(zipUrl, {
-        mode: 'cors',
-        redirect: 'follow',
-        });
-        console.log('⬅️ ZIP fetch status:', res2.status, res2.statusText);
-        if (!res2.ok) {
-        const errText = await res2.text();
-        console.error('❌ ZIP error body:', errText);
-        throw new Error(`Errore download zip (${res2.status})`);
-        }
-
+        // 2) download ZIP
+        const res2 = await fetch(zipUrl, { mode: 'cors', redirect: 'follow' });
+        if (!res2.ok) throw new Error(`Errore download zip (${res2.status})`);
         const buffer = await res2.arrayBuffer();
-        console.log('📦 ZIP downloaded, byteLength =', buffer.byteLength);
-        console.log('🔍 Parsing ZIP file...');
+
+        // 3) parsing ZIP
         const mainZip = await JSZip.loadAsync(buffer);
-        console.log('📂 ZIP file parsed, files:', Object.keys(mainZip.files));
-        const innerNames = Object.keys(mainZip.files).filter((f) => f.endsWith('.zip'));
-
+        const nestedNames = Object.keys(mainZip.files).filter(f => f.endsWith('.zip'));
         const points: DataPoint[] = [];
-        for (const name of innerNames) {
+
+        for (const name of nestedNames) {
           try {
-            console.log(`▶️ Apro il nested ZIP “${name}”`);
             const nestedBuf = await mainZip.file(name)!.async('arraybuffer');
-            console.log(`  📥 nestedBuf byteLength: ${nestedBuf.byteLength}`);
-
-            const nestedZip = await JSZip.loadAsync(nestedBuf);
-            const nestedFiles = Object.keys(nestedZip.files);
-            console.log(`  ✅ Nested ZIP caricato, file:`, nestedFiles);
-            const metaText = await nestedZip.file('IMU_pred_meta.json')!.async('string');
-            console.log(`  📄 Meta JSON caricato, lunghezza: ${metaText.length}`);
-            const meta = JSON.parse(metaText) as IMUMeta;
+            const nz = await JSZip.loadAsync(nestedBuf);
+            const meta = JSON.parse(
+              await nz.file('IMU_pred_meta.json')!.async('string')
+            ) as IMUMeta;
             const start = new Date(meta.start_iso8601).getTime();
-            const timeSensor = meta.sensors.find((s) => s.channels.includes('time'))!;
-            const valSensor = meta.sensors.find((s) => s.channels.length > 1)!;
+            const timeSensor = meta.sensors.find(s => s.channels.includes('time'))!;
+            const valSensor = meta.sensors.find(s => s.channels.length > 1)!;
 
-            const tv = new DataView(await nestedZip.file(timeSensor.file_name)!.async('arraybuffer'));
-            const vv = new DataView(await nestedZip.file(valSensor.file_name)!.async('arraybuffer'));
-            const n = meta.rows;
-            const m = valSensor.channels.length;
-
+            const tv = new DataView(
+              await nz.file(timeSensor.file_name)!.async('arraybuffer')
+            );
+            const vv = new DataView(
+              await nz.file(valSensor.file_name)!.async('arraybuffer')
+            );
+            const n = meta.rows, m = valSensor.channels.length;
             for (let i = 0; i < n; i++) {
-              const relSec = tv.getFloat64(i * 8, true);
-              const t = start + relSec * 1000;
+              const rel = tv.getFloat64(i * 8, true);
+              const t = start + rel * 1000;
               const pt: DataPoint = { time: t };
               valSensor.channels.forEach((ch, j) => {
                 const raw = vv.getFloat64((i * m + j) * 8, true);
@@ -158,7 +136,66 @@ const TremorDashboard: FC = () => {
           }
         }
         points.sort((a, b) => a.time - b.time);
-        setData(points);
+
+        // 4) padding iniziale/finale
+        const endTime = Date.now();
+        const zeroFields = { tremor_power: 0, pred_tremor_proba: 0, pred_arm_at_rest: 0 };
+        const allPoints = [
+          { time: parsedStart, ...zeroFields },
+          ...points,
+          { time: endTime, ...zeroFields },
+        ].sort((a, b) => a.time - b.time);
+        setData(allPoints);
+
+        // 5) aggregazione per periodi
+        const thr = parseFloat(threshold);
+        const filt = allPoints.filter(p => (p.tremor_power ?? 0) > thr);
+        const buckets: Record<string, number[]> = {};
+        const fmtDay = (d: Date) =>
+          String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0');
+
+        if (rangeKey === '7d') {
+          for (let i = 0; i < 7; i++) {
+            const d = new Date(parsedStart + i * 86400_000);
+            buckets[fmtDay(d)] = [];
+          }
+          filt.forEach(p => {
+            const d = new Date(p.time);
+            const key = fmtDay(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+            if (buckets[key]) buckets[key].push(p.tremor_power!);
+          });
+        } else if (rangeKey === '1m') {
+          const weeks = 5;
+          for (let w = 1; w <= weeks; w++) buckets[`W${w}`] = [];
+          filt.forEach(p => {
+            const idx = Math.min(
+              weeks,
+              Math.floor((p.time - parsedStart) / (7 * 86400_000)) + 1
+            );
+            buckets[`W${idx}`].push(p.tremor_power!);
+          });
+        } else if (rangeKey === '6m' || rangeKey === '1y') {
+          const months = Math.ceil((endTime - parsedStart) / (30 * 86400_000));
+          for (let m = 0; m <= months; m++) {
+            const d = new Date(parsedStart);
+            d.setMonth(d.getMonth() + m);
+            buckets[d.toLocaleString('it-IT', { month: 'short' })] = [];
+          }
+          filt.forEach(p => {
+            const d = new Date(p.time);
+            const key = d.toLocaleString('it-IT', { month: 'short' });
+            if (buckets[key]) buckets[key].push(p.tremor_power!);
+          });
+        }
+        setAggData(
+          Object.keys(buckets).map(period => ({
+            period,
+            avg:
+              buckets[period].length > 0
+                ? buckets[period].reduce((a, b) => a + b, 0) / buckets[period].length
+                : 0,
+          }))
+        );
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -166,159 +203,212 @@ const TremorDashboard: FC = () => {
       }
     };
     load();
-  }, [timestamp]);
+  }, [timestamp, parsedStart, threshold, rangeKey]);
 
-  const handleRangeClick = (rangeKey:string) => {
-    const ts = getTimestampFromRange(rangeKey);
-    setTimestamp(ts);
+  const handleRangeClick = (key: '1d' | '7d' | '1m' | '6m' | '1y') => {
+    if (!threshold || isNaN(Number(threshold))) {
+      alert('Inserisci una soglia numerica valida prima di continuare.');
+      return;
+    }
+    setRangeKey(key);
+    setTimestamp(getTimestampFromRange(key));
   };
 
-
-  
-
-   if (!timestamp) {
-  return (
-    <div style={{ padding: '1rem' }}>
-      <h2>Seleziona un intervallo di tempo</h2>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <label>
-          Soglia tremor_power per la media:{' '}
-          <input
-            type="number"
-            step="any"
-            value={threshold}
-            onChange={(e) => setThreshold(e.target.value)}
-            placeholder="Es: 0.0001"
-            style={{ padding: '0.4rem', width: '150px', fontSize: '1rem' }}
-          />
-        </label>
+  // UI iniziale
+  if (!timestamp) {
+    return (
+      <div style={{ padding: '1rem' }}>
+        <h2>Seleziona un intervallo di tempo</h2>
+        <div style={{ marginBottom: '1rem' }}>
+          <label>
+            Soglia tremor_power per la media:{' '}
+            <input
+              type="number"
+              step="any"
+              value={threshold}
+              onChange={e => setThreshold(e.target.value)}
+              placeholder="Es: 0.0001"
+              style={{ padding: '0.4rem', width: '150px', fontSize: '1rem' }}
+            />
+          </label>
+        </div>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          {['1d', '7d', '1m', '6m', '1y'].map(k => (
+            <button key={k} onClick={() => handleRangeClick(k as any)}>
+              {k === '1d' && 'Ultimo giorno'}
+              {k === '7d' && 'Ultima settimana'}
+              {k === '1m' && 'Ultimo mese'}
+              {k === '6m' && 'Ultimi 6 mesi'}
+              {k === '1y' && 'Ultimo anno'}
+            </button>
+          ))}
+        </div>
       </div>
-
-      <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        {['1d', '7d', '1m', '6m', '1y'].map((rangeKey:string) => (
-          <button
-            key={rangeKey}
-            onClick={() => {
-              if (!threshold || isNaN(Number(threshold))) {
-                alert('Inserisci una soglia numerica valida prima di continuare.');
-                return;
-              }
-              setTimestamp(getTimestampFromRange(rangeKey));
-            }}
-          >
-            {rangeKey === '1d' && 'Ultimo giorno'}
-            {rangeKey === '7d' && 'Ultima settimana'}
-            {rangeKey === '1m' && 'Ultimo mese'}
-            {rangeKey === '6m' && 'Ultimi 6 mesi'}
-            {rangeKey === '1y' && 'Ultimo anno'}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+    );
+  }
 
   if (error) return <p style={{ color: 'red' }}>Errore: {error}</p>;
-  if (loading || !data.length) return <p>Caricamento dati…</p>;
+  if (loading) return <p>Caricamento dati…</p>;
 
-    if (!threshold || isNaN(Number(threshold))) {
-      return (
-        <div style={{ padding: '1rem' }}>
-          <h3>Inserisci una soglia per il calcolo della media (es: 0.0001):</h3>
-          <input
-            type="number"
-            step="any"
-            value={threshold}
-            onChange={(e) => setThreshold(e.target.value)}
-            style={{ padding: '0.5rem', fontSize: '1rem', width: '200px' }}
-            placeholder="Es: 0.0001"
-          />
-        </div>
-      );
-    }
-    const filteredValues: number[] = data
-    .map((d) => d.tremor_power ?? 0)
-    .filter((val) => val > parseFloat(threshold));
-    const meanTremorPower = filteredValues.length > 0
-    ? filteredValues.reduce((a, b) => a + b, 0) / filteredValues.length
-    : 0;
+  // Soglia non valida
+  if (!threshold || isNaN(Number(threshold))) {
+    return (
+      <div style={{ padding: '1rem' }}>
+        <h3>Inserisci una soglia per la media (es: 0.0001):</h3>
+        <input
+          type="number"
+          step="any"
+          value={threshold}
+          onChange={e => setThreshold(e.target.value)}
+          style={{ padding: '0.5rem', fontSize: '1rem', width: '200px' }}
+          placeholder="Es: 0.0001"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="p-4">
       <h2 className="text-lg mb-4">
-        Dati caricati da: {timestamp.replace('T', ' ').replace(/-/g, ':')}
+        Dati da: <strong>{timestamp.replace('T', ' ').replace(/-/g, ':')}</strong>
       </h2>
-
       {/* Tremor Power */}
       <section className="h-72 mb-8">
-        <h3 className="mb-2">Tremor Power over Time</h3>
-         <div
-            style={styles.graphDiv}
-        >
-        <ResponsiveContainer>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="time" type="number" domain={["dataMin", "dataMax"]} tickFormatter={timeFormatter} />
-            <YAxis />
-            <Tooltip labelFormatter={timeFormatter} />
-            <Line type="monotone" dataKey="tremor_power" dot={false} strokeWidth={2} />
-            <ReferenceLine
-              y={meanTremorPower}
-              stroke="red"
-              strokeDasharray="6 6"
-              label={{ value: `Media > ${threshold}`, position: 'right', fill: 'red' }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <h3 className="mb-2">
+          Tremor Power{' '}
+          {rangeKey === '1d'
+            ? 'over Time'
+            : rangeKey === '7d'
+            ? 'media giornaliera'
+            : rangeKey === '1m'
+            ? 'media settimanale'
+            : 'media mensile'}
+        </h3>
+        <div style={styles.graphDiv}>
+          <ResponsiveContainer>
+            {rangeKey === '1d' ? (
+              <LineChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="time"
+                  type="number"
+                  domain={[parsedStart!, Date.now()]}
+                  tickFormatter={timeFormatter}
+                />
+                <YAxis />
+                <Tooltip labelFormatter={timeFormatter} />
+                <Line
+                  type="monotone"
+                  dataKey="tremor_power"
+                  dot={false}
+                  strokeWidth={2}
+                />
+                <ReferenceLine
+                  y={
+                    data
+                      .filter(d => (d.tremor_power ?? 0) > parseFloat(threshold))
+                      .reduce((sum, d) => sum + (d.tremor_power ?? 0), 0) /
+                    Math.max(
+                      1,
+                      data.filter(d => (d.tremor_power ?? 0) > parseFloat(threshold))
+                        .length
+                    )
+                  }
+                  stroke="red"
+                  strokeDasharray="6 6"
+                  label={{
+                    value: `Media > ${threshold}`,
+                    position: 'right',
+                    fill: 'red',
+                  }}
+                />
+              </LineChart>
+            ) : (
+              <BarChart data={aggData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="period" />
+                <YAxis />
+                <Tooltip formatter={(v: number) => v.toFixed(4)} />
+                <Bar dataKey="avg" />
+              </BarChart>
+            )}
+          </ResponsiveContainer>
         </div>
       </section>
-
       {/* Tremor Probability */}
       <section className="h-72 mb-8">
         <h3 className="mb-2">Tremor Probability over Time</h3>
-        <div
-          style={styles.graphDiv}>
-        <ResponsiveContainer>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="time" type="number" domain={["dataMin", "dataMax"]} tickFormatter={timeFormatter} />
-            <YAxis domain={[0, Math.max(...data.map((d) => d.pred_tremor_proba ?? 0)) * 1.2]} />
-            <Tooltip labelFormatter={timeFormatter} formatter={(v: number) => v.toFixed(3)} />
-            <Line type="monotone" dataKey="pred_tremor_proba" dot={false} strokeWidth={2} />
-          </LineChart>
-        </ResponsiveContainer>
+        <div style={styles.graphDiv}>
+          <ResponsiveContainer>
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="time"
+                type="number"
+                domain={["dataMin", "dataMax"]}
+                tickFormatter={timeFormatter}
+              />
+              <YAxis
+                domain={[
+                  0,
+                  Math.max(...data.map(d => d.pred_tremor_proba ?? 0)) * 1.2,
+                ]}
+              />
+              <Tooltip
+                labelFormatter={timeFormatter}
+                formatter={(v: number) => v.toFixed(3)}
+              />
+              <Line
+                type="monotone"
+                dataKey="pred_tremor_proba"
+                dot={false}
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
       </section>
-
       {/* Arm at Rest */}
       <section className="h-52">
         <h3 className="mb-2">Arm at Rest Over Time</h3>
-         <div
-          style={styles.graphDiv}>
-        <ResponsiveContainer>
-          <ScatterChart>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="time" type="number" domain={["dataMin", "dataMax"]} tickFormatter={timeFormatter} />
-            <YAxis dataKey="pred_arm_at_rest" type="number" domain={[0, 2]} ticks={[0, 1, 2]} />
-            <Tooltip labelFormatter={timeFormatter} formatter={(v: number) => v} />
-           <Scatter
-            name="Arm at Rest"
-            data={data}
-            shape={(props: any) => {
-                // diciamo che props ha { cx, cy, payload }
-                const { cx, cy, payload } = props as {
-                cx: number;
-                cy: number;
-                payload: DataPoint;
-                };
-                // restituisco sempre un elemento valido (null → <g />)
-                return payload.pred_arm_at_rest === 1
-                ? <circle cx={cx} cy={cy} r={4} fill="#8884d8" />
-                : <g />;
-            }}
-            />
-          </ScatterChart>
-        </ResponsiveContainer>
+        <div style={styles.graphDiv}>
+          <ResponsiveContainer>
+            <ScatterChart>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="time"
+                type="number"
+                domain={["dataMin", "dataMax"]}
+                tickFormatter={timeFormatter}
+              />
+              <YAxis
+                dataKey="pred_arm_at_rest"
+                type="number"
+                domain={[0, 2]}
+                ticks={[0, 1, 2]}
+              />
+              <Tooltip
+                labelFormatter={timeFormatter}
+                formatter={(v: number) => v}
+              />
+              <Scatter
+                name="Arm at Rest"
+                data={data}
+                shape={(props: any) => {
+                  const { cx, cy, payload } = props as {
+                    cx: number;
+                    cy: number;
+                    payload: DataPoint;
+                  };
+                  return payload.pred_arm_at_rest === 1 ? (
+                    <circle cx={cx} cy={cy} r={4} fill="#8884d8" />
+                  ) : (
+                    <g />
+                  );
+                }}
+              />
+            </ScatterChart>
+          </ResponsiveContainer>
         </div>
       </section>
     </div>
@@ -327,12 +417,10 @@ const TremorDashboard: FC = () => {
 
 export default TremorDashboard;
 
-const styles={
-    graphDiv: {
-     
-        width: '100%',
-        height: '18rem',      // fisso 18rem = circa h-72
-        marginTop: '0.5rem',
-    
-    },
-}
+const styles = {
+  graphDiv: {
+    width: '100%',
+    height: '18rem',
+    marginTop: '0.5rem',
+  },
+};
