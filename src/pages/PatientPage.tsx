@@ -11,9 +11,10 @@ const PatientPage: React.FC = () => {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [showPrompt, setShowPrompt] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!showPrompt && id) {
+    if (!showPrompt && !isLoading && id && !patient) {
       const fetched: Patient = {
         id,
         name: 'Mario Rossi',
@@ -26,7 +27,26 @@ const PatientPage: React.FC = () => {
       };
       setPatient(fetched);
     }
-  }, [id, showPrompt]);
+  }, [id, showPrompt, isLoading, patient]);
+
+  const handleLoadData = async () => {
+    if (!id) return;
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/inference/makeInference', {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error('Errore nel caricamento dei dati');
+      }
+      setShowPrompt(false);
+    } catch (error) {
+      setShowPrompt(false);
+      alert(error + ' Procedo con i dati disponibili.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSave = (updated: Patient) => {
     setPatient(updated);
@@ -37,14 +57,52 @@ const PatientPage: React.FC = () => {
     setIsEditing(false);
   };
 
+  // BarLoader component
+  const BarLoader: React.FC = () => (
+    <div style={styles.barLoaderContainer}>
+      <div style={styles.barLoader}></div>
+    </div>
+  );
+
+  // Inject keyframes for bar loading animation
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes bar-loading {
+        0% { transform: translateX(-100%); }
+        50% { transform: translateX(0); }
+        100% { transform: translateX(100%); }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <BarLoader />
+      </div>
+    );
+  }
+
   if (showPrompt) {
     return (
       <div style={styles.promptContainer}>
         <div style={styles.promptBox}>
           <h2>Vuoi caricare gli ultimi dati sul tremore del paziente?</h2>
           <div style={styles.buttonRow}>
-            <button onClick={() => setShowPrompt(false)} style={styles.button}>No</button>
-            <button onClick={() => setShowPrompt(false)} style={{ ...styles.button, backgroundColor: '#27ae60' }}>Sì</button>
+            <button onClick={() => setShowPrompt(false)} style={styles.button}>
+              No
+            </button>
+            <button
+              onClick={handleLoadData}
+              style={{ ...styles.button, backgroundColor: '#27ae60' }}
+            >
+              Sì
+            </button>
           </div>
         </div>
       </div>
@@ -60,19 +118,22 @@ const PatientPage: React.FC = () => {
       <div style={styles.leftPane}>
         <div style={styles.headerRow}>
           <h1 style={styles.title}>Dettaglio Paziente: {patient.name}</h1>
-        
         </div>
         <TremorDashboard />
         <PatientCard patient={patient} />
-          <button style={styles.editButton} onClick={() => setIsEditing(true)}>
-            Modifica Paziente
-          </button>
+        <button style={styles.editButton} onClick={() => setIsEditing(true)}>
+          Modifica Paziente
+        </button>
       </div>
 
       {isEditing && (
         <div style={styles.overlay} onClick={handleCancel}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <EditPatientForm patient={patient} onSave={handleSave} onCancel={handleCancel} />
+            <EditPatientForm
+              patient={patient}
+              onSave={handleSave}
+              onCancel={handleCancel}
+            />
           </div>
         </div>
       )}
@@ -105,30 +166,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     margin: 0,
     color: '#2c3e50',
   },
-  // Stile base per i button
-  buttonBase: {
-    padding: '0.5rem 1rem',
-    border: 'none',
-    borderRadius: '0.375rem',
-    cursor: 'pointer',
-    fontSize: '0.9rem',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-    transition: 'transform 0.1s ease, box-shadow 0.1s ease',
-  },
-  // Pulsante primario
-  primaryButton: {
-    backgroundColor: '#4f46e5', // indigo-600
-    color: '#fff',
-  },
-  // Pulsante secondario (es. annulla)
-  secondaryButton: {
-    backgroundColor: '#e5e7eb', // gray-200
-    color: '#374151',
-  },
   editButton: {
     alignSelf: 'center',
     marginBottom: '1rem',
-    // estende buttonBase + primaryButton
     padding: '0.5rem 1rem',
     border: 'none',
     borderRadius: '0.375rem',
@@ -171,7 +211,6 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   button: {
     flex: 1,
-    // estende buttonBase + primaryButton
     padding: '0.5rem 1rem',
     border: 'none',
     borderRadius: '0.375rem',
@@ -202,8 +241,20 @@ const styles: { [key: string]: React.CSSProperties } = {
     width: '90%',
     maxWidth: '500px',
   },
+  barLoaderContainer: {
+    width: '200px',
+    height: '6px',
+    backgroundColor: '#e0e0e0',
+    borderRadius: '3px',
+    overflow: 'hidden',
+  },
+  barLoader: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#4f46e5',
+    animation: 'bar-loading 1s linear infinite',
+    transform: 'translateX(-100%)',
+  },
 };
-
-
 
 export default PatientPage;

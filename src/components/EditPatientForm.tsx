@@ -10,26 +10,36 @@ interface EditPatientFormProps {
 
 const EditPatientForm: FC<EditPatientFormProps> = ({ patient, onSave, onCancel }) => {
   const [formData, setFormData] = useState<Patient>({ ...patient });
+  const [trattiInput, setTrattiInput] = useState(formData.tratti_caratteristici.join(', '));
 
-  const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]:
-        name === 'età' || name === 'peso' || name === 'altezza'
-          ? Number(value)
-          : name === 'tratti_caratteristici'
-          ? value.split(',').map(s => s.trim())
-          : (value as any),
-    }));
-  };
+const handleChange = (
+  e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+) => {
+  const { name, value } = e.target;
 
-  const handleSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
+  if (name === 'tratti_caratteristici') {
+    setTrattiInput(value); // aggiorna la stringa raw
+    return;
+  }
+
+  setFormData(prev => ({
+    ...prev,
+    [name]:
+      name === 'età' || name === 'peso' || name === 'altezza'
+        ? Number(value)
+        : (value as any),
+  }));
+};
+const handleSubmit = (e: FormEvent) => {
+  e.preventDefault();
+  onSave({
+    ...formData,
+    tratti_caratteristici: trattiInput
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean),
+  });
+};
 
   return (
     <form onSubmit={handleSubmit} style={styles.form}>
@@ -93,12 +103,12 @@ const EditPatientForm: FC<EditPatientFormProps> = ({ patient, onSave, onCancel }
 
       <label style={styles.label}>
         Tratti (separati da virgola):
-        <textarea
-          name="tratti_caratteristici"
-          value={formData.tratti_caratteristici.join(', ')}
-          onChange={handleChange}
-          style={{ ...styles.input, height: '4rem' }}
-        />
+       <textarea
+  name="tratti_caratteristici"
+  value={trattiInput}
+  onChange={handleChange}
+  style={{ ...styles.input, height: '4rem' }}
+/>
       </label>
 
       <label style={styles.label}>
