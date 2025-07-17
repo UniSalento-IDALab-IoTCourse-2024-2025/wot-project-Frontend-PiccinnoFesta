@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, FC } from 'react';
+import React, { useEffect, useState, useMemo, FC, useRef } from 'react';
 import JSZip from 'jszip';
 import {
   LineChart,
@@ -67,8 +67,9 @@ const TremorDashboard: FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [timestamp, setTimestamp] = useState<string | null>(null);
-  const [rangeKey, setRangeKey] = useState<'1d' | '7d' | '1m' | '6m' | '1y' | ''>('');
-  const [threshold, setThreshold] = useState<string>('');
+  const [rangeKey, setRangeKey] = useState<'1d' | '7d' | '1m' | '6m' | '1y' | ''>('1d');
+  const thresholdInputRef = useRef<HTMLInputElement>(null);
+  const [currentThreshold, setCurrentThreshold] = useState<string>('0.0005'); // Soglia attualmente applicata
 
   // Parso correttamente il timestamp per ottenere startTime numerico
   const parsedStart = useMemo<number | null>(() => {
@@ -78,6 +79,11 @@ const TremorDashboard: FC = () => {
     const t = Date.parse(iso);
     return isNaN(t) ? null : t;
   }, [timestamp]);
+
+  // Initial data load on component mount
+  useEffect(() => {
+    setTimestamp(getTimestampFromRange('1d'));
+  }, []);
 
   useEffect(() => {
     if (!timestamp || parsedStart === null) return;
@@ -149,7 +155,7 @@ const TremorDashboard: FC = () => {
         setData(allPoints);
 
         // 5) aggregazione per periodi
-        const thr = parseFloat(threshold);
+        const thr = parseFloat(currentThreshold); // Usa currentThreshold
         const filt = allPoints.filter(p => (p.tremor_power ?? 0) > thr);
         const buckets: Record<string, number[]> = {};
         const fmtDay = (d: Date) =>
@@ -204,38 +210,75 @@ const TremorDashboard: FC = () => {
       }
     };
     load();
-  }, [timestamp, parsedStart, threshold, rangeKey]);
+  }, [timestamp, parsedStart, currentThreshold, rangeKey]); // Dipendenza da currentThreshold
 
-  const handleRangeClick = (key: '1d' | '7d' | '1m' | '6m' | '1y') => {
-    if (!threshold || isNaN(Number(threshold))) {
-      alert('Inserisci una soglia numerica valida prima di continuare.');
+  const applyThresholdAndSetRange = (key: '1d' | '7d' | '1m' | '6m' | '1y') => {
+    const inputValue = thresholdInputRef.current?.value;
+    if (!inputValue || isNaN(Number(inputValue))) {
+      alert('Inserisci una soglia numerica valida.');
       return;
     }
+    setCurrentThreshold(inputValue); // Applica il valore dal ref
     setRangeKey(key);
     setTimestamp(getTimestampFromRange(key));
   };
 
-  // UI iniziale
-  if (!timestamp) {
-    return (
-      <div style={{ padding: '1rem' }}>
-        <h2>Seleziona un intervallo di tempo</h2>
-        <div style={{ marginBottom: '1rem' }}>
+  const handleApplyThresholdClick = () => {
+    const inputValue = thresholdInputRef.current?.value;
+    if (!inputValue || isNaN(Number(inputValue))) {
+      alert('Inserisci una soglia numerica valida prima di applicare.');
+      return;
+    }
+    setCurrentThreshold(inputValue); // Questo triggera il `useEffect` per ricaricare i dati
+    // Opzionale: pulire il campo input dopo l'applicazione
+    if (thresholdInputRef.current) {
+        thresholdInputRef.current.value = '';
+    }
+  };
+
+
+  if (error) return <p style={{ color: 'red' }}>Errore: {error}</p>;
+  if (loading) return <p>Caricamento dati…</p>;
+
+  return (
+  <div className="p-4">
+    <h2 className="text-lg mb-4">
+      Dati da: <strong>{timestamp?.replace('T', ' ').replace(/-/g, ':')}</strong>
+    </h2>
+
+    <div style={{ marginBottom: '1rem' }}>
           <label>
-            Soglia tremor_power per la media:{' '}
+            Soglia di intensità del tremore significativa:{' '}
             <input
               type="number"
               step="any"
-              value={threshold}
-              onChange={e => setThreshold(e.target.value)}
+              defaultValue={'0.0005'} // Imposta il valore iniziale, ma non lo controlla
+              ref={thresholdInputRef} // Collega il ref all'input
               placeholder="Es: 0.0001"
               style={{ padding: '0.4rem', width: '150px', fontSize: '1rem' }}
             />
           </label>
+          <button 
+            onClick={handleApplyThresholdClick}
+            style={{ ...styles.buttonBase,...styles.secondaryButton ,marginLeft: '0.5rem', padding: '0.4rem 0.8rem', fontSize: '1rem' }}
+          >
+            Applica Soglia
+          </button>
+          {/* Nuova label per la soglia attuale */}
+          <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#555' }}>
+            Soglia attualmente impostata: <strong>{parseFloat(currentThreshold).toFixed(4)}</strong>
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
           {['1d', '7d', '1m', '6m', '1y'].map(k => (
-            <button key={k} onClick={() => handleRangeClick(k as any)}>
+            <button
+              key={k}
+              onClick={() => applyThresholdAndSetRange(k as any)}
+              style={{
+                ...styles.buttonBase,
+                ...(rangeKey === k ? styles.primaryButton : styles.secondaryButton),
+              }}
+            >
               {k === '1d' && 'Ultimo giorno'}
               {k === '7d' && 'Ultima settimana'}
               {k === '1m' && 'Ultimo mese'}
@@ -244,35 +287,6 @@ const TremorDashboard: FC = () => {
             </button>
           ))}
         </div>
-      </div>
-    );
-  }
-
-  if (error) return <p style={{ color: 'red' }}>Errore: {error}</p>;
-  if (loading) return <p>Caricamento dati…</p>;
-
-  // Soglia non valida
-  if (!threshold || isNaN(Number(threshold))) {
-    return (
-      <div style={{ padding: '1rem' }}>
-        <h3>Inserisci una soglia per la media (es: 0.0001):</h3>
-        <input
-          type="number"
-          step="any"
-          value={threshold}
-          onChange={e => setThreshold(e.target.value)}
-          style={{ padding: '0.5rem', fontSize: '1rem', width: '200px' }}
-          placeholder="Es: 0.0001"
-        />
-      </div>
-    );
-  }
-
-  return (
-  <div className="p-4">
-    <h2 className="text-lg mb-4">
-      Dati da: <strong>{timestamp.replace('T', ' ').replace(/-/g, ':')}</strong>
-    </h2>
 
     {/* Tremor Power */}
     <section className="h-72 mb-8">
@@ -309,18 +323,18 @@ const TremorDashboard: FC = () => {
               <ReferenceLine
                 y={
                   data
-                    .filter(d => (d.tremor_power ?? 0) > parseFloat(threshold))
+                    .filter(d => (d.tremor_power ?? 0) > parseFloat(currentThreshold))
                     .reduce((s, d) => s + (d.tremor_power ?? 0), 0) /
                   Math.max(
                     1,
-                    data.filter(d => (d.tremor_power ?? 0) > parseFloat(threshold))
+                    data.filter(d => (d.tremor_power ?? 0) > parseFloat(currentThreshold))
                       .length
                   )
                 }
                 stroke="red"
                 strokeDasharray="6 6"
                 label={{
-                  value: `Media > ${threshold}`,
+                  value: `Media > ${currentThreshold}`,
                   position: 'right',
                   fill: 'red',
                 }}
@@ -497,5 +511,25 @@ const styles = {
     barSize: 30,
     radius: radiusTuple,
     fill: 'url(#grad)',
+  },
+  // Stile base per i bottoni
+  buttonBase: {
+    padding: '0.5rem 1rem',
+    border: 'none',
+    borderRadius: '0.375rem',
+    cursor: 'pointer',
+    fontSize: '0.9rem',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    transition: 'transform 0.1s ease, box-shadow 0.1s ease',
+  },
+  // Bottoni primari (azioni principali)
+  primaryButton: {
+    backgroundColor: '#4f46e5', // indigo-600
+    color: '#fff',
+  },
+  // Bottoni secondari (annulla, alternative)
+  secondaryButton: {
+    backgroundColor: '#cddbf7ff', // gray-200
+    color: '#374151',
   },
 };

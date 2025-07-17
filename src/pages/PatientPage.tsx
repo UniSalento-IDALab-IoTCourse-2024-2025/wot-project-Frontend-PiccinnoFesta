@@ -1,22 +1,41 @@
+// src/pages/PatientPage.tsx
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import TremorDashboard from '../components/TremorDashboard'; // <-- ✅ Usa il nuovo componente
-
-interface Patient {
-  id: string | undefined;
-  name: string;
-}
+import TremorDashboard from '../components/TremorDashboard';
+import PatientCard from '../components/PatientCard';
+import EditPatientForm from '../components/EditPatientForm';
+import { Patient } from '../types';
 
 const PatientPage: React.FC = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [showPrompt, setShowPrompt] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    if (!showPrompt) {
-      setPatient({ id, name: 'Mario Rossi' });
+    if (!showPrompt && id) {
+      const fetched: Patient = {
+        id,
+        name: 'Mario Rossi',
+        età: 30,
+        sesso: 'M',
+        peso: 70,
+        altezza: 175,
+        tratti_caratteristici: ['Capelli castani', 'Occhi verdi'],
+        diagnosi: 'Nessuna',
+      };
+      setPatient(fetched);
     }
   }, [id, showPrompt]);
+
+  const handleSave = (updated: Patient) => {
+    setPatient(updated);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+  };
 
   if (showPrompt) {
     return (
@@ -25,15 +44,7 @@ const PatientPage: React.FC = () => {
           <h2>Vuoi caricare gli ultimi dati sul tremore del paziente?</h2>
           <div style={styles.buttonRow}>
             <button onClick={() => setShowPrompt(false)} style={styles.button}>No</button>
-            <button
-              onClick={() => {
-                setShowPrompt(false);
-                setPatient({ id, name: 'Mario Rossi' });
-              }}
-              style={{ ...styles.button, backgroundColor: '#27ae60' }}
-            >
-              Sì
-            </button>
+            <button onClick={() => setShowPrompt(false)} style={{ ...styles.button, backgroundColor: '#27ae60' }}>Sì</button>
           </div>
         </div>
       </div>
@@ -45,25 +56,88 @@ const PatientPage: React.FC = () => {
   }
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Dettaglio Paziente: {patient.name}</h1>
-      
-      {/* 🔁 Sostituzione qui */}
-      <TremorDashboard  />
+    <div style={styles.pageContainer}>
+      <div style={styles.leftPane}>
+        <div style={styles.headerRow}>
+          <h1 style={styles.title}>Dettaglio Paziente: {patient.name}</h1>
+        
+        </div>
+        <TremorDashboard />
+        <PatientCard patient={patient} />
+          <button style={styles.editButton} onClick={() => setIsEditing(true)}>
+            Modifica Paziente
+          </button>
+      </div>
+
+      {isEditing && (
+        <div style={styles.overlay} onClick={handleCancel}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <EditPatientForm patient={patient} onSave={handleSave} onCancel={handleCancel} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-  container: {
-    padding: '30px',
-    background: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+  pageContainer: {
+    display: 'flex',
+    gap: '2rem',
+    padding: '2rem',
+    background: '#fff',
+    minHeight: '100vh',
+    position: 'relative',
+  },
+  leftPane: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+  },
+  headerRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '1rem',
   },
   title: {
-    marginBottom: '25px',
+    margin: 0,
     color: '#2c3e50',
+  },
+  // Stile base per i button
+  buttonBase: {
+    padding: '0.5rem 1rem',
+    border: 'none',
+    borderRadius: '0.375rem',
+    cursor: 'pointer',
+    fontSize: '0.9rem',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    transition: 'transform 0.1s ease, box-shadow 0.1s ease',
+  },
+  // Pulsante primario
+  primaryButton: {
+    backgroundColor: '#4f46e5', // indigo-600
+    color: '#fff',
+  },
+  // Pulsante secondario (es. annulla)
+  secondaryButton: {
+    backgroundColor: '#e5e7eb', // gray-200
+    color: '#374151',
+  },
+  editButton: {
+    alignSelf: 'center',
+    marginBottom: '1rem',
+    // estende buttonBase + primaryButton
+    padding: '0.5rem 1rem',
+    border: 'none',
+    borderRadius: '0.375rem',
+    cursor: 'pointer',
+    fontSize: '0.9rem',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    transition: 'transform 0.1s ease, box-shadow 0.1s ease',
+    backgroundColor: '#4f46e5',
+    color: '#fff',
   },
   loading: {
     textAlign: 'center',
@@ -75,30 +149,61 @@ const styles: { [key: string]: React.CSSProperties } = {
     height: '100vh',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f6f6f6',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   promptBox: {
-    background: 'white',
-    padding: '40px',
-    borderRadius: '10px',
+    background: '#fff',
+    padding: '2rem',
+    borderRadius: '0.5rem',
     boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
     textAlign: 'center',
   },
   buttonRow: {
-    marginTop: '20px',
     display: 'flex',
-    gap: '20px',
+    gap: '1rem',
+    marginTop: '1rem',
     justifyContent: 'center',
   },
   button: {
-    padding: '10px 20px',
-    backgroundColor: '#3498db',
-    color: 'white',
+    flex: 1,
+    // estende buttonBase + primaryButton
+    padding: '0.5rem 1rem',
     border: 'none',
-    borderRadius: '6px',
+    borderRadius: '0.375rem',
     cursor: 'pointer',
-    fontSize: '16px',
+    fontSize: '0.9rem',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+    transition: 'transform 0.1s ease, box-shadow 0.1s ease',
+    backgroundColor: '#4f46e5',
+    color: '#fff',
+  },
+  overlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100vw',
+    height: '100vh',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  modal: {
+    background: '#fff',
+    padding: '2rem',
+    borderRadius: '0.5rem',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+    width: '90%',
+    maxWidth: '500px',
   },
 };
+
+
 
 export default PatientPage;

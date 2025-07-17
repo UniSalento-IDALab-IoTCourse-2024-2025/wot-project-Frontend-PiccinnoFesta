@@ -6,16 +6,7 @@ export interface Vitals {
   sleepDuration: number;
 }
 
-export interface Patient {
-  id: string;
-  name: string;
-  age: number;
-  condition: string;
-  status: 'Stabile' | 'Attenzione' | 'Critico';
-  lastUpdate: string;
-  vitals: Vitals;
-  notes: string;
-}
+
 
 export interface Notification {
   id: string;
@@ -24,4 +15,16 @@ export interface Notification {
   message: string;
   timestamp: string;
   read: boolean;
+
+}
+export type Sesso = 'M' | 'F' | 'Altro';
+export interface Patient {
+  id: string;
+  name: string;
+  età: number;
+  sesso: Sesso;
+  peso: number;       // in kg
+  altezza: number;    // in cm
+  tratti_caratteristici: string[];
+  diagnosi: string;
 }
