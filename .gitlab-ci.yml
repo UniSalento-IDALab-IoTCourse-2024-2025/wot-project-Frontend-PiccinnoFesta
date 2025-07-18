@@ -38,4 +38,4 @@ deploy:
         docker run -d --name frontend -p 3000:80 $IMAGE_NAME
       "
   only:
-    - main
+    - master
