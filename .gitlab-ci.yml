@@ -23,7 +23,7 @@ build:
     - docker build -t $IMAGE_NAME .
     - docker push $IMAGE_NAME
   only:
-    - main
+    - master
 
 deploy:
   stage: deploy
