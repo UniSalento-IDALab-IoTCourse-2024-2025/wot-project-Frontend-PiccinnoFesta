@@ -1,25 +1,25 @@
 import React, { useState } from 'react';
 
 interface LoginFormProps {
-  onLogin: (username: string, password: string) => void;
+  onLogin: (email: string, password: string) => void;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onLogin }) => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onLogin(username, password);
+    onLogin(email, password);
   };
 
   return (
     <form onSubmit={handleSubmit} style={styles.form}>
-      <label style={styles.label}>Username:</label>
+      <label style={styles.label}>E-mail:</label>
       <input
         type="text"
-        value={username}
-        onChange={e => setUsername(e.target.value)}
+        value={email}
+        onChange={e => setEmail(e.target.value)}
         required
         style={styles.input}
       />
@@ -54,7 +54,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
   button: {
     marginTop: '20px',
-    backgroundColor: '#3498db',
+    backgroundColor: '#4f46e5',
     color: 'white',
     border: 'none',
     padding: '10px',

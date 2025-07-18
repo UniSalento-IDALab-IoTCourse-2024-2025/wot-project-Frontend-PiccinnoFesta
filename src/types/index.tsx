@@ -28,3 +28,12 @@ export interface Patient {
   tratti_caratteristici: string[];
   diagnosi: string;
 }
+export interface Doctor{
+  id:string,
+  name:string,
+  surname:string,
+  email:string,
+  password:string,
+  license:string,
+  patient: Patient[];
+}

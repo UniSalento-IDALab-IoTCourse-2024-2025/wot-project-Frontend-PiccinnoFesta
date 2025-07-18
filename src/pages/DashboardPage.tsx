@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import PatientList from '../components/PatientList';
 import Notifications from '../components/Notification';
 import EditPatientForm from '../components/EditPatientForm';
-import { Patient } from '../types';
+import { Doctor, Patient } from '../types';
+import { useNavigate } from 'react-router-dom';
+
 
 interface Notification {
   id: number;
@@ -11,9 +13,12 @@ interface Notification {
 }
 
 const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
+  
   const [patients, setPatients] = useState<Patient[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [doctor, setDoctor] = useState<Doctor | null>(null);
 
   /**
    * ----------------------------------------------------
@@ -21,6 +26,15 @@ const DashboardPage: React.FC = () => {
    * ----------------------------------------------------
    */
   useEffect(() => {
+
+    //prendo il profilo del dottore dal localStorage
+    setDoctor(
+      localStorage.getItem('doctorProfile')
+        ? JSON.parse(localStorage.getItem('doctorProfile')!)
+        : null
+    );    
+    console.log('Dottore:', doctor);
+
     setPatients([
       {
         id: '1',
@@ -102,6 +116,17 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+
+  const handleLogout = () => {
+  const conferma = window.confirm('Sei sicuro di voler effettuare il logout?');
+  if (!conferma) return;
+
+  localStorage.removeItem('authToken');
+  localStorage.removeItem('doctorProfile');
+  navigate('/');
+};
+
+
   /**
    * ----------------------------------------------------
    * RENDER
@@ -113,10 +138,8 @@ const DashboardPage: React.FC = () => {
       <header style={styles.topBar}>
         <div style={styles.logo}>PDMonitor</div>
         <div style={styles.headerRight}>
-          <span style={styles.bell}>🔔</span>
-          <span style={styles.username}>Dott.ssa Riva</span>
-          <button style={styles.logout}>Logout</button>
-        </div>
+          <span style={styles.username}>Dott. {doctor?.surname}</span>
+          <button style={styles.logout} onClick={handleLogout}>Logout</button>          </div>
       </header>
 
       {/* Main */}
