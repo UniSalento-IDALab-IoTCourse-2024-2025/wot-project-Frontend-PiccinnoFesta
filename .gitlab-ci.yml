@@ -4,38 +4,36 @@ services:
   - docker:dind
 
 variables:
-  DOCKER_HOST: tcp://docker:2375/
-  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
 
 stages:
-  - build
   - deploy
 
-variables:
-  IMAGE_NAME: registry.gitlab.com/iot5321423/frontendfinal:latest
-
 before_script:
-  - echo "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin registry.gitlab.com
-
-build:
-  stage: build
-  script:
-    - docker build -t $IMAGE_NAME .
-    - docker push $IMAGE_NAME
-  only:
-    - master
+  - mkdir -p ~/.ssh
+  - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+  - chmod 600 ~/.ssh/id_rsa
+  - eval "$(ssh-agent -s)"
+  - ssh-add ~/.ssh/id_rsa
+  - echo -e "Host *\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
 
 deploy:
   stage: deploy
-  script:
-    - mkdir -p ~/.ssh
-    - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
-    - chmod 600 ~/.ssh/id_rsa
-    - ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "
-        docker pull $IMAGE_NAME &&
-        docker stop frontend || true &&
-        docker rm frontend || true &&
-        docker run -d --name frontend -p 3000:80 $IMAGE_NAME
-      "
   only:
     - master
+  script:
+    - echo "Deploying React+Vite to EC2 via docker-compose"
+
+    # Prepara la cartella remota
+    - ssh ubuntu@$EC2_HOST "rm -rf ~/frontend && mkdir ~/frontend"
+
+    # Copia tutto il necessario sul server EC2
+    - scp -r ./* ubuntu@$EC2_HOST:/home/ubuntu/frontend/
+
+    # Esegui il build e deploy via Docker Compose
+    - ssh ubuntu@$EC2_HOST "
+        cd /home/ubuntu/frontend &&
+        docker compose down || true &&
+        docker compose build &&
+        docker compose up -d
+      "
