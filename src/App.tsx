@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import PatientPage from './pages/PatientPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const App: React.FC = () => {
   useGlobalStyles();
@@ -10,9 +11,14 @@ const App: React.FC = () => {
   return (
     <div style={styles.app}>
       <Routes>
+        {/* Public route */}
         <Route path="/" element={<LoginPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/patient/:id" element={<PatientPage />} />
+
+        {/* Protected routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/patient/:id" element={<PatientPage />} />
+        </Route>
       </Routes>
     </div>
   );
