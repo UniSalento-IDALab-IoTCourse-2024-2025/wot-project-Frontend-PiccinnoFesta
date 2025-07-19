@@ -69,11 +69,12 @@ const styles: Record<string, CSSProperties> = {
   },
   trait: {
     fontSize: '0.75rem',
-    background: 'rgba(229, 231, 235, 0.5)',
-    color: '#334155',
-    padding: '0.25rem 0.75rem',
+    background: 'linear-gradient(to right, #e0e7ff, #f0f4ff)',
+    color: '#1e293b',
+    padding: '0.4rem 0.9rem',
     borderRadius: '9999px',
-    backdropFilter: 'blur(4px)',
+    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)',
+    fontWeight: 500,
   },
   diagnosisLabel: {
     fontSize: '0.75rem',

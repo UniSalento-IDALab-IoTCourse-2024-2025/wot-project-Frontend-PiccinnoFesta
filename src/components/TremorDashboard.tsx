@@ -48,6 +48,27 @@ const timeFormatter = (ts: number): string =>
     timeZone: 'Europe/Rome',
   }).format(new Date(ts));
 
+ const formatAdjustedTimestamp = (ts: string): string => {
+  const [date, time] = ts.split('T'); 
+  const [hh, mm, ss] = time.split('-').map(Number);
+
+  const dateObj = new Date(`${date}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}Z`);
+  const shifted = new Date(dateObj.getTime() + 2 * 60 * 60 * 1000);
+
+  const yyyy = shifted.getUTCFullYear();
+  const MM = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(shifted.getUTCDate()).padStart(2, '0');
+  const HH = String(shifted.getUTCHours()).padStart(2, '0');
+  const min = String(shifted.getUTCMinutes()).padStart(2, '0');
+
+  return `${yyyy}:${MM}:${dd} ${HH}:${min}`;
+};
+
+const formatItalianDate = (isoTimestamp: string): string => {
+  const [date, time] = isoTimestamp.split(' ');
+  const [yyyy, MM, dd] = date.split(':');
+  return `${dd}/${MM}/${yyyy}`;
+};
 // Genera timestamp ISO compatibile con il server (colons->hyphens)
 const getTimestampFromRange = (range: string): string => {
   const now = new Date();
@@ -266,9 +287,20 @@ const TremorDashboard: FC<TremorProps> = ({ patientId }) => {
 
   return (
   <div className="p-4">
-    <h2 className="text-lg mb-4">
-      Dati da: <strong>{timestamp?.replace('T', ' ').replace(/-/g, ':')}</strong>
-    </h2>
+<h2 className="text-lg mb-4" style={styles.timestampWrapper}>
+  Dati a partire dal:{' '}
+  {timestamp && (
+    <span>
+      <span style={styles.datePart}>
+        {formatItalianDate(formatAdjustedTimestamp(timestamp))}
+      </span>
+      , dalle ore:{' '}
+      <span style={styles.timePart}>
+        {formatAdjustedTimestamp(timestamp).split(' ')[1]}
+      </span>
+    </span>
+  )}
+</h2>
 
     <div style={{ marginBottom: '1rem' }}>
           <label>
@@ -595,6 +627,21 @@ const styles = {
   textAlign: 'center' as const,
   maxWidth: '950px',
   width: '100%',
+},
+timestampWrapper: {
+  fontSize: '1.125rem',
+  fontWeight: 500,
+  color: '#1f2937',
+},
+
+datePart: {
+  color: '#374151', // grigio scuro
+  fontWeight: 500,
+},
+
+timePart: {
+  color: '#4b5563', // grigio medio
+  fontWeight: 500,
 },
 barLoaderContainer: {
     width: '200px',
