@@ -5,6 +5,8 @@ import EditPatientForm from '../components/EditPatientForm';
 import { Doctor, Patient } from '../types';
 import { useNavigate } from 'react-router-dom';
 import logoFrontend from '../assets/images/logoFrontend.png'; 
+import { Info, RefreshCw } from 'lucide-react';
+
 
 interface Notification {
   id: number;
@@ -120,12 +122,12 @@ useEffect(() => {
       //const savedPatient: Patient = await response.json()
       console.log('Paziente parsato:', savedPatient);
       if(savedPatient){
-       alert(`⚠️ ATTENZIONE: questo valore non verrà visualizzato una seconda volta!
-
-        Paziente salvato con successo.
-        ID assegnato: ${savedPatient.id}
-
-        Notifica l'identificativo al tecnico per completare l'installazione di PDTrack.`);
+      alert(
+        `Paziente salvato con successo.\n` +
+        `ID assegnato: ${savedPatient.id}\n\n` +
+        `Notifica l'identificativo al tecnico per completare l'installazione di PDTrack.\n\n` +
+        `Per visualizzare nuovamente quest'informazione, controlla il pannello per il monitoraggio dei dispositivi non installati.`
+      );
       }
 
       setPatients((prev) => [...prev, savedPatient]);
@@ -147,6 +149,45 @@ useEffect(() => {
   localStorage.removeItem('authToken');
   localStorage.removeItem('doctorProfile');
   navigate('/');
+};
+
+const handleUpdatePatient = async (patient: Patient) => {
+  const confirmUpdate = window.confirm(
+    `Vuoi segnare il dispositivo come installato per ${patient.name} ${patient.surname}?`
+  );
+  if (!confirmUpdate) return;
+
+  try {
+    const token = localStorage.getItem('authToken');
+
+    const updatedPatient = {
+      ...patient,
+      deviceInstalled: true,
+    };
+
+    const response = await fetch('/api/users/patient/update', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(updatedPatient),
+    });
+
+    if (!response.ok) {
+      throw new Error('Errore durante l’aggiornamento del paziente');
+    }
+
+    const updated = await response.json();
+    alert(`Dispositivo installato per ${updated.name} ${updated.surname}`);
+
+    setPatients((prev) =>
+      prev.map((p) => (p.id === updated.id ? updated : p))
+    );
+  } catch (error) {
+    console.error('Errore aggiornamento paziente:', error);
+    alert('Errore durante l’aggiornamento');
+  }
 };
 
 
@@ -212,7 +253,35 @@ useEffect(() => {
 
         {/* Right Pane */}
         <section style={styles.rightPane}>
-          <h2 style={styles.sectionTitle}>Blocco destro</h2>
+          <h2 style={styles.sectionTitle}>Dispositivi non installati</h2>
+        <div style={styles.notificationsBox}>
+          {patients
+  .filter((p) => !p.deviceInstalled)
+  .map((p) => (
+    <div key={p.id} style={styles.uninstalledPatient}>
+      <span style={styles.redDot}></span>
+      {p.name} {p.surname}
+      
+      {/* Icone info e update */}
+     <div style={styles.iconWrapper}>
+        <button
+          style={styles.iconButton}
+          onClick={() => alert(`ID paziente: ${p.id}`)}
+          title="Visualizza ID paziente"
+        >
+          <Info size={18} color="#4b5563" />
+        </button>
+        <button
+          style={styles.iconButton}
+          onClick={() => handleUpdatePatient(p)}
+          title="Imposta dispositivo come installato"
+        >
+          <RefreshCw size={18} color="#4b5563" />
+        </button>
+      </div>
+          </div>
+        ))}
+        </div>
           
         </section>
       </main>
@@ -439,5 +508,60 @@ logoutHover: {
     fontWeight: 600,
     color: darkPrimary,
   },
+  uninstalledPatient: {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '10px',
+  padding: '10px',
+  backgroundColor: '#fef2f2',
+  borderRadius: '8px',
+  fontWeight: 500,
+  color: '#991b1b',
+  boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
+},
+
+redDot: {
+  width: '10px',
+  height: '10px',
+  borderRadius: '50%',
+  backgroundColor: '#dc2626',
+  flexShrink: 0,
+},
+iconWrapper: {
+  marginLeft: 'auto',
+  display: 'flex',
+  gap: '8px',
+},
+
+iconButton: {
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: '4px',
+  borderRadius: '6px',
+  transition: 'background-color 0.2s ease',
+},
+iconInfoButton: {
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: '4px',
+  borderRadius: '6px',
+  color: '#2563eb', // blu info
+  transition: 'background-color 0.2s ease',
+},
+
+iconRefreshButton: {
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  padding: '4px',
+  borderRadius: '6px',
+  color: '#10b981', // verde update
+  transition: 'background-color 0.2s ease',
+},
+iconButtonHover: {
+  backgroundColor: '#f3f4f6',
+},
 };
 export default DashboardPage;

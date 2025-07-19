@@ -28,6 +28,7 @@ export interface Patient {
   height: number;    // in cm
   traits: string[];
   diagnosis: string;
+  deviceInstalled: boolean;
 }
 export interface Doctor{
   id:string,

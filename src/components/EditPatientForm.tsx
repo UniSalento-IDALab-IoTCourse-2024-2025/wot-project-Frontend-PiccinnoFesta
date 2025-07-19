@@ -19,6 +19,7 @@ const [formData, setFormData] = useState<Patient>(() => ({
   height: patient?.height ?? 0,
   traits: patient?.traits ?? [],
   diagnosis: patient?.diagnosis ?? '',
+  deviceInstalled: patient?.deviceInstalled ?? false, 
 }));  const [trattiInput, setTrattiInput] = useState(formData.traits.join(', '));
 
 const handleChange = (
