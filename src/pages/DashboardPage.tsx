@@ -24,6 +24,8 @@ const DashboardPage: React.FC = () => {
   const [hoveredAdd, setHoveredAdd] = useState(false);
   
 
+  const [isHoveringAdd, setIsHoveringAdd] = useState(false);
+
   /**
    * ----------------------------------------------------
    * SIDE EFFECTS
@@ -181,18 +183,22 @@ useEffect(() => {
           <h2 style={styles.sectionTitle}>Pazienti</h2>
           <div style={styles.patientListBox}>
             <PatientList patients={patients} onDelete={handleDeletePatient} />            </div>
-          <div style={styles.addCard}>
-            <button
-              style={{
-                ...styles.addButton,
-                ...(hoveredAdd && styles.addButtonHover),
-              }}
-              onClick={() => setShowForm(true)}
-              onMouseEnter={() => setHoveredAdd(true)}
-              onMouseLeave={() => setHoveredAdd(false)}
-            >
-              ＋
-            </button>
+          <div
+            style={{
+              ...styles.addCard,
+              ...(isHoveringAdd ? styles.addCardHover : {}),
+            }}
+          >           <button
+          style={{
+            ...styles.addButton,
+            ...(isHoveringAdd ? styles.addButtonHover : {}),
+          }}
+          onClick={() => setShowForm(true)}
+          onMouseEnter={() => setIsHoveringAdd(true)}
+          onMouseLeave={() => setIsHoveringAdd(false)}
+        >
+          ＋
+        </button>
             <p style={styles.addText}>Aggiungi nuovo paziente</p>
           </div>
         </section>
@@ -252,10 +258,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     zIndex: 10,
   },
   logo: {
-    fontSize: '20px',
-    fontWeight: 700,
-    color: primaryColor,
-  },
+  fontSize: '22px',
+  fontWeight: 800,
+  color: primaryColor,
+  letterSpacing: '0.6px',
+  textTransform: 'uppercase',
+  fontFamily: `'Inter', 'Segoe UI', sans-serif`,
+  textShadow: '1px 1px 0 rgba(0, 0, 0, 0.02)',
+  cursor: 'default',
+},
   headerRight: {
     display: 'flex',
     alignItems: 'center',
@@ -266,10 +277,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     cursor: 'pointer',
     color: accentColor,
   },
-  username: {
-    fontWeight: 500,
-    color: textMuted,
-  },
+ username: {
+  fontWeight: 500,
+  color: '#4b5563', // tonalità soft-gray
+  backgroundColor: '#f3f4f6',
+  padding: '4px 10px',
+  borderRadius: '8px',
+  fontSize: '0.9rem',
+  letterSpacing: '0.3px',
+  boxShadow: 'inset 0 0 0.5px rgba(0,0,0,0.06)',
+},
   logout: {
   backgroundColor: dangerColor,
   color: white,
@@ -341,6 +358,12 @@ logoutHover: {
     transition: 'transform 0.15s ease, box-shadow 0.2s ease',
     boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
   },
+  addCardHover: {
+  backgroundColor: '#eef2ff',
+  transform: 'scale(1.015)',
+  boxShadow: '0 6px 14px rgba(79, 70, 229, 0.1)',
+  transition: 'all 0.2s ease-in-out',
+},
   addButtonHover: {
   transform: 'scale(1.08)',
   boxShadow: '0 4px 12px rgba(79, 70, 229, 0.35)', // primaryColor glow
