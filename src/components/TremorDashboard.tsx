@@ -179,7 +179,7 @@ const TremorDashboard: FC<TremorProps> = ({ patientId }) => {
             if (buckets[key]) buckets[key].push(p.tremor_power!);
           });
         } else if (rangeKey === '1m') {
-          const weeks = 5;
+          const weeks =4;
           for (let w = 1; w <= weeks; w++) buckets[`W${w}`] = [];
           filt.forEach(p => {
             const idx = Math.min(
@@ -394,8 +394,22 @@ const TremorDashboard: FC<TremorProps> = ({ patientId }) => {
               <CartesianGrid {...styles.grid} />
               <XAxis dataKey="period" {...styles.axis} />
               <YAxis {...styles.axis} />
-              <Tooltip {...styles.tooltip} formatter={(v: number) => v.toFixed(4)} />
-              <Bar dataKey="avg" {...styles.bar} />
+              <Tooltip
+                {...styles.tooltip}
+                formatter={(value: number, name: string, props: any) => {
+                  const formatted =
+                    value === 0
+                      ? '0'
+                      : Math.abs(value) < 1e-4 || Math.abs(value) >= 1e4
+                      ? value.toExponential(2)
+                      : value.toFixed(4);
+                  return [formatted, 'Media'];
+                }}
+                labelFormatter={(label: string) =>
+                  label.startsWith('W') ? `Settimana ${label.replace('W', '')}` : label
+                }
+              />        
+                <Bar dataKey="avg" {...styles.bar} />
             </BarChart>
           )}
         </ResponsiveContainer>
