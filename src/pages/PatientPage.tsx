@@ -193,7 +193,7 @@ if (isLoading) {
         <div style={styles.headerRow}>
           <h1 style={styles.title}>Dettaglio Paziente: {patient.name} {patient.surname}</h1>
         </div>
-        <TremorDashboard />
+        <TremorDashboard patientId ={patient.id}/>
         <PatientCard patient={patient} />
         <button style={styles.editButton} onClick={()=> setIsEditing(true)}>
           Modifica Paziente

@@ -23,6 +23,9 @@ interface DataPoint {
   pred_arm_at_rest?: number;
   [key: string]: number | undefined;
 }
+interface TremorProps {
+  patientId: string;
+}
 
 interface SensorMeta {
   file_name: string;
@@ -60,7 +63,7 @@ const getTimestampFromRange = (range: string): string => {
   return past.toISOString().replace(/:/g, '-').split('.')[0];
 };
 
-const TremorDashboard: FC = () => {
+const TremorDashboard: FC<TremorProps> = ({ patientId }) => {
   const [data, setData] = useState<DataPoint[]>([]);
   const [aggData, setAggData] = useState<{ period: string; avg: number }[]>([]);
   const [aggProba, setAggProba] = useState<{ period: string; avg: number }[]>([]);
@@ -92,7 +95,11 @@ const TremorDashboard: FC = () => {
       try {
         // 1) presign URL
         const presignUrl = `/api/inference/getPredictionZip?timestamp=${timestamp}`;
-        const res1 = await fetch(presignUrl);
+        const res1 = await fetch(presignUrl,{
+          headers: {
+          "patientid": patientId
+          }
+        });
         if (!res1.ok) {
           const errText = await res1.text();
           throw new Error(`Errore presign (${res1.status}): ${errText}`);
@@ -237,11 +244,25 @@ const TremorDashboard: FC = () => {
   };
 
 
+  const BarLoader: React.FC = () => (
+      <div style={styles.barLoaderContainer}>
+        <div style={styles.barLoader}></div>
+      </div>
+    );
+
+
   if (error) return (
   <div style={styles.errorContainer}>
     Impossibile recuperare i dati
   </div>
-  );  if (loading) return <p>Caricamento dati…</p>;
+  );  if (loading) return (
+  <div style={styles.loadingWrapper}>
+    <div style={styles.loadingContent}>
+      <p style={styles.loadingText}>Caricamento in corso...</p>
+      <BarLoader />
+    </div>
+  </div>
+);
 
   return (
   <div className="p-4">
@@ -255,7 +276,7 @@ const TremorDashboard: FC = () => {
             <input
               type="number"
               step="any"
-              defaultValue={'0.0005'} // Imposta il valore iniziale, ma non lo controlla
+              defaultValue={'0'} // Imposta il valore iniziale, ma non lo controlla
               ref={thresholdInputRef} // Collega il ref all'input
               placeholder="Es: 0.0001"
               style={{ padding: '0.4rem', width: '150px', fontSize: '1rem' }}
@@ -268,8 +289,15 @@ const TremorDashboard: FC = () => {
             Applica Soglia
           </button>
           {/* Nuova label per la soglia attuale */}
-          <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#555' }}>
-            Soglia attualmente impostata: <strong>{parseFloat(currentThreshold).toFixed(4)}</strong>
+         <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#555' }}>
+            Soglia attualmente impostata:{' '}
+            <strong>
+              {
+                Math.abs(Number(currentThreshold)) < 1e-4
+                  ? Number(currentThreshold).toExponential(2) 
+                  : Number(currentThreshold).toFixed(4)       
+              }
+            </strong>
           </p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
@@ -541,9 +569,9 @@ const styles = {
   borderRadius: '1.5rem',                      // stesso radius
   padding: '1.5rem',
   margin: '1rem auto',
-  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)', // stesso shadow
-  backdropFilter: 'blur(6px)',                // effetto vetro
-  color: '#1f2937',                            // colore testo coerente (scuro)
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)', 
+  backdropFilter: 'blur(6px)',            
+  color: '#1f2937',                           
   display: 'flex',
   justifyContent: 'center',
   alignItems: 'center',
@@ -553,6 +581,36 @@ const styles = {
   textAlign: 'center' as const,
   maxWidth: '950px',
   width: '100%',
-}
+},
+barLoaderContainer: {
+    width: '200px',
+    height: '6px',
+    backgroundColor: '#e0e0e0',
+    borderRadius: '3px',
+    overflow: 'hidden',
+  },
+  barLoader: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#4f46e5',
+    animation: 'bar-loading 1s linear infinite',
+    transform: 'translateX(-100%)',
+  },
+  loadingWrapper: {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '200px', // o 100vh se vuoi tutto lo schermo
+    width: '100%',
+  },
+  loadingContent: {
+    textAlign: 'center' as const,
+  },
+  loadingText: {
+    fontSize: '18px',
+    marginBottom: '1.5rem',
+    color: '#374151',
+  },
+  
 
 };
