@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoginForm from '../components/LoginForm';
+import logoFrontendFull from '../assets/images/logoFrontendFull.png'; 
 
 const LOGIN_API_URL = '/api/users/doctor/login';    
 const SIGNUP_API_URL = '/api/users/doctor/signUp';  
@@ -108,16 +109,21 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Dashboard Dottore - Login</h1>
-      {!showSignup ? (
-        <>
-          <LoginForm onLogin={handleLogin} />
-          <button style={styles.signupButton} onClick={() => setShowSignup(true)}>
-            Sign Up
-          </button>
-        </>
-      ) : (
+        <div style={styles.container}>
+        <img
+          src={logoFrontendFull}
+          alt="PDTrack Logo"
+          style={styles.logo}
+        />
+        <h1 style={styles.title}>Login</h1>
+        {!showSignup ? (
+          <>
+            <LoginForm onLogin={handleLogin} />
+            <button style={styles.signupButton} onClick={() => setShowSignup(true)}>
+              Registrati
+            </button>
+          </>
+        ) : (
         <form onSubmit={handleSignupSubmit}>
           <input
             type="text"
@@ -166,7 +172,7 @@ const LoginPage: React.FC = () => {
             required
           />
           <button type="submit" style={styles.signupButton}>
-            Invia Registrazione
+            Registrati
           </button>
           <button type="button" style={styles.cancelButton} onClick={() => setShowSignup(false)}>
             Annulla
@@ -222,6 +228,12 @@ const styles: { [key: string]: React.CSSProperties } = {
     marginTop: '10px',
     cursor: 'pointer',
   },
+  logo: {
+  display: 'block',
+  margin: '0 auto 20px',
+  maxWidth: '200px',
+  height: 'auto',
+},
 };
 
 export default LoginPage;

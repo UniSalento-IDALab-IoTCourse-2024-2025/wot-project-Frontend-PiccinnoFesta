@@ -4,7 +4,7 @@ import Notifications from '../components/Notification';
 import EditPatientForm from '../components/EditPatientForm';
 import { Doctor, Patient } from '../types';
 import { useNavigate } from 'react-router-dom';
-
+import logoFrontend from '../assets/images/logoFrontend.png'; 
 
 interface Notification {
   id: number;
@@ -159,22 +159,29 @@ useEffect(() => {
     <div style={styles.wrapper}>
       {/* Header */}
       <header style={styles.topBar}>
-        <div style={styles.logo}>PDTrack</div>
-        <div style={styles.headerRight}>
-          <span style={styles.username}>Dott. {doctor?.surname}</span>
-          <button
-              style={{
-                ...styles.logout,
-                ...(hoveredLogout && styles.logoutHover),
-              }}
-              onClick={handleLogout}
-              onMouseEnter={() => setHoveredLogout(true)}
-              onMouseLeave={() => setHoveredLogout(false)}
-            >
-              Logout
-            </button>
-          </div>
-      </header>
+      <div style={styles.logo}>
+        <img
+          src={logoFrontend}
+          alt="Logo PDTrack"
+          style={{ height: 32, marginRight: 8, verticalAlign: 'middle' }}
+        />
+        Tremor Monitoring
+      </div>
+      <div style={styles.headerRight}>
+        <span style={styles.username}>Dott. {doctor?.surname}</span>
+        <button
+          style={{
+            ...styles.logout,
+            ...(hoveredLogout && styles.logoutHover),
+          }}
+          onClick={handleLogout}
+          onMouseEnter={() => setHoveredLogout(true)}
+          onMouseLeave={() => setHoveredLogout(false)}
+        >
+          Logout
+        </button>
+      </div>
+    </header>
 
       {/* Main */}
       <main style={styles.main}>
