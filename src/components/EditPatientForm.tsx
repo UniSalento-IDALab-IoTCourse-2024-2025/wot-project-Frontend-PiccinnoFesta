@@ -12,20 +12,21 @@ const EditPatientForm: FC<EditPatientFormProps> = ({ patient, onSave, onCancel }
 const [formData, setFormData] = useState<Patient>(() => ({
   id: patient?.id ?? '', // fallback a stringa vuota
   name: patient?.name ?? '',
-  età: patient?.età ?? 0,
-  sesso: patient?.sesso ?? 'M',
-  peso: patient?.peso ?? 0,
-  altezza: patient?.altezza ?? 0,
-  tratti_caratteristici: patient?.tratti_caratteristici ?? [],
-  diagnosi: patient?.diagnosi ?? '',
-}));  const [trattiInput, setTrattiInput] = useState(formData.tratti_caratteristici.join(', '));
+  surname: patient?.surname ?? '',
+  age: patient?.age ?? 0,
+  gender: patient?.gender ?? 'MALE',
+  weight: patient?.weight ?? 0,
+  height: patient?.height ?? 0,
+  traits: patient?.traits ?? [],
+  diagnosis: patient?.diagnosis ?? '',
+}));  const [trattiInput, setTrattiInput] = useState(formData.traits.join(', '));
 
 const handleChange = (
   e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
 ) => {
   const { name, value } = e.target;
 
-  if (name === 'tratti_caratteristici') {
+  if (name === 'traits') {
     setTrattiInput(value); // aggiorna la stringa raw
     return;
   }
@@ -33,7 +34,7 @@ const handleChange = (
   setFormData(prev => ({
     ...prev,
     [name]:
-      name === 'età' || name === 'peso' || name === 'altezza'
+      name === 'age' || name === 'weight' || name === 'height'
         ? Number(value)
         : (value as any),
   }));
@@ -42,7 +43,7 @@ const handleSubmit = (e: FormEvent) => {
   e.preventDefault();
   onSave({
     ...formData,
-    tratti_caratteristici: trattiInput
+    traits: trattiInput
       .split(',')
       .map(s => s.trim())
       .filter(Boolean),
@@ -62,13 +63,23 @@ const handleSubmit = (e: FormEvent) => {
           style={styles.input}
         />
       </label>
+      <label style={styles.label}>
+      Cognome:
+      <input
+        type="text"
+        name="surname"
+        value={(formData as any).surname}
+        onChange={handleChange}
+        style={styles.input}
+      />
+    </label>
 
       <label style={styles.label}>
         Età:
         <input
         type="number"
-        name="età"
-        value={formData.età}
+        name="age"
+        value={formData.age}
         onChange={handleChange}
         style={{ ...styles.input, ...styles.noNumberArrows }}
         inputMode="numeric"
@@ -78,14 +89,14 @@ const handleSubmit = (e: FormEvent) => {
       <label style={styles.label}>
         Sesso:
         <select
-          name="sesso"
-          value={formData.sesso}
+          name="gender"
+          value={formData.gender}
           onChange={handleChange}
           style={styles.input}
         >
-          <option value="M">M</option>
-          <option value="F">F</option>
-          <option value="Altro">Altro</option>
+          <option value="MALE">M</option>
+          <option value="FEMALE">F</option>
+          <option value="OTHER">Altro</option>
         </select>
       </label>
 
@@ -94,8 +105,8 @@ const handleSubmit = (e: FormEvent) => {
         
       <input
         type="number"
-        name="peso"
-        value={formData.peso}
+        name="weight"
+        value={formData.weight}
         onChange={handleChange}
         style={{ ...styles.input, ...styles.noNumberArrows }}
         inputMode="numeric"
@@ -106,20 +117,20 @@ const handleSubmit = (e: FormEvent) => {
       <label style={styles.label}>
         Altezza (cm):
        
-<input
-  type="number"
-  name="altezza"
-  value={formData.altezza}
-  onChange={handleChange}
-  style={{ ...styles.input, ...styles.noNumberArrows }}
-  inputMode="numeric"
-/>
+      <input
+        type="number"
+        name="height"
+        value={formData.height}
+        onChange={handleChange}
+        style={{ ...styles.input, ...styles.noNumberArrows }}
+        inputMode="numeric"
+      />
       </label>
 
       <label style={styles.label}>
         Tratti (separati da virgola):
        <textarea
-  name="tratti_caratteristici"
+  name="traits"
   value={trattiInput}
   onChange={handleChange}
   style={{ ...styles.input, height: '4rem' }}
@@ -129,8 +140,8 @@ const handleSubmit = (e: FormEvent) => {
       <label style={styles.label}>
         Diagnosi:
         <textarea
-          name="diagnosi"
-          value={formData.diagnosi}
+          name="diagnosis"
+          value={formData.diagnosis}
           onChange={handleChange}
           style={{ ...styles.input, height: '3rem' }}
         />

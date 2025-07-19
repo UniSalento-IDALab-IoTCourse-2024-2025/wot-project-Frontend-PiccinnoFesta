@@ -25,67 +25,64 @@ const DashboardPage: React.FC = () => {
    * SIDE EFFECTS
    * ----------------------------------------------------
    */
-  useEffect(() => {
+useEffect(() => {
+  // Recupera il profilo del dottore dal localStorage
+  const storedDoctor = localStorage.getItem('doctorProfile');
+  if (storedDoctor) {
+    setDoctor(JSON.parse(storedDoctor));
+  }
 
-    //prendo il profilo del dottore dal localStorage
-    setDoctor(
-      localStorage.getItem('doctorProfile')
-        ? JSON.parse(localStorage.getItem('doctorProfile')!)
-        : null
-    );    
-    console.log('Dottore:', doctor);
+  // Fetch dei pazienti dal backend
+  const fetchPatients = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
 
-    setPatients([
-      {
-        id: '1',
-        name: 'Mario Rossi',
-        età: 30,
-        sesso: 'M',
-        peso: 70,
-        altezza: 175,
-        tratti_caratteristici: ['Capelli castani', 'Occhi verdi'],
-        diagnosi: 'Nessuna',
-      },
-      {
-        id: '2',
-        name: 'Luisa Bianchi',
-        età: 25,
-        sesso: 'F',
-        peso: 60,
-        altezza: 165,
-        tratti_caratteristici: ['Capelli biondi'],
-        diagnosi: 'Ipertensione',
-      },
-      {
-        id: '3',
-        name: 'Giorgio Verdi',
-        età: 45,
-        sesso: 'M',
-        peso: 80,
-        altezza: 180,
-        tratti_caratteristici: ['Barba folta'],
-        diagnosi: 'Diabete',
-      },
-    ]);
+      const response = await fetch('/api/users/patient/getAll', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    setNotifications([
-      {
-        id: 1,
-        message: 'Frequenza cardiaca elevata (115 bpm) rilevata.',
-        timestamp: '17/06/2024, 12:31:00',
-      },
-      {
-        id: 2,
-        message: 'Variazione significativa nella velocità di andatura.',
-        timestamp: '17/06/2024, 13:06:00',
-      },
-      {
-        id: 3,
-        message: 'Frequenza dei tremori superiore alla soglia.',
-        timestamp: '17/06/2024, 10:15:00',
-      },
-    ]);
-  }, []);
+      if (!response.ok) {
+        throw new Error('Errore nel recupero dei pazienti');
+      }
+
+      const data = await response.json();
+
+      if (Array.isArray(data.patientList)) {
+        console.log('Pazienti recuperati:', data.patientList);
+        setPatients(data.patientList);
+      } else {
+        console.error('Formato non valido:', data);
+      }
+    } catch (error) {
+      console.error('Errore durante il fetch dei pazienti:', error);
+    }
+  };
+
+  fetchPatients();
+
+  // Notifiche statiche
+  setNotifications([
+    {
+      id: 1,
+      message: 'Frequenza cardiaca elevata (115 bpm) rilevata.',
+      timestamp: '17/06/2024, 12:31:00',
+    },
+    {
+      id: 2,
+      message: 'Variazione significativa nella velocità di andatura.',
+      timestamp: '17/06/2024, 13:06:00',
+    },
+    {
+      id: 3,
+      message: 'Frequenza dei tremori superiore alla soglia.',
+      timestamp: '17/06/2024, 10:15:00',
+    },
+  ]);
+}, []);
 
   /**
    * ----------------------------------------------------
@@ -95,20 +92,36 @@ const DashboardPage: React.FC = () => {
   const handleAddPatient = async (newPatient: Omit<Patient, 'id'>) => {
     try {
       console.log('Salvataggio paziente:', newPatient);
-      const response = await fetch('YOUR_API_ENDPOINT_HERE', {
+      const token = localStorage.getItem('authToken');
+
+      const response = await fetch('/api/users/patient/insert', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json' },
         body: JSON.stringify(newPatient),
       });
-      console.log('Risposta del server:', response);
+
       if (!response.ok) {
         alert('Errore durante il salvataggio del paziente');
         throw new Error('Errore nel salvataggio');
-      } else {
-        alert('Paziente salvato con successo, ricaricare la pagina per visualizzare il nuovo paziente');
       }
 
-      const savedPatient: Patient = await response.json();
+      const json = await response.json();
+      console.log('Paziente salvato:', json);
+      const savedPatient: Patient = json; // qui non va bene senza asserzione, perché json è any
+      //const savedPatient: Patient = await response.json()
+      console.log('Paziente parsato:', savedPatient);
+      if(savedPatient){
+       alert(`⚠️ ATTENZIONE: questo valore non verrà visualizzato una seconda volta!
+
+        Paziente salvato con successo.
+        ID assegnato: ${savedPatient.id}
+
+        Notifica l'identificativo al tecnico per completare l'installazione di PDTrack.`);
+      }
+
       setPatients((prev) => [...prev, savedPatient]);
       setShowForm(false);
     } catch (error) {
@@ -136,7 +149,7 @@ const DashboardPage: React.FC = () => {
     <div style={styles.wrapper}>
       {/* Header */}
       <header style={styles.topBar}>
-        <div style={styles.logo}>PDMonitor</div>
+        <div style={styles.logo}>PDTrack</div>
         <div style={styles.headerRight}>
           <span style={styles.username}>Dott. {doctor?.surname}</span>
           <button style={styles.logout} onClick={handleLogout}>Logout</button>          </div>
@@ -232,15 +245,18 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: textMuted,
   },
   logout: {
-    backgroundColor: dangerColor,
-    color: white,
-    border: 'none',
-    borderRadius: '8px',
-    padding: '6px 16px',
-    cursor: 'pointer',
-    fontWeight: 500,
-    transition: 'transform 0.1s ease',
-  },
+  backgroundColor: dangerColor,
+  color: white,
+  border: 'none',
+  borderRadius: '8px',
+  padding: '8px 20px',
+  cursor: 'pointer',
+  fontWeight: 600,
+  fontSize: '0.9rem',
+  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.25)', // ombra rossa soft
+  transition: 'transform 0.1s ease, box-shadow 0.2s ease',
+  letterSpacing: '0.5px',
+},
   main: {
     display: 'flex',
     flexDirection: 'row',
@@ -299,12 +315,19 @@ const styles: { [key: string]: React.CSSProperties } = {
     color: primaryColor,
     fontWeight: 600,
   },
-  patientListBox: {
-    flex: 1,
-    overflowY: 'auto',
-    maxHeight: '520px',
-    paddingRight: '6px',
-  },
+ patientListBox: {
+  height: '200px',
+  overflowY: 'auto',
+  backgroundColor: white,
+  borderRadius: '16px',
+  boxShadow: '0 6px 12px rgba(0,0,0,0.08)',  
+  padding: '20px',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '12px',
+  border: `1px solid #e5e7eb`,                
+  scrollBehavior: 'smooth',
+},
   notificationsBox: {
     display: 'flex',
     flexDirection: 'column',

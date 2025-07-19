@@ -6,6 +6,8 @@ import PatientCard from '../components/PatientCard';
 import EditPatientForm from '../components/EditPatientForm';
 import { Patient } from '../types';
 
+import { useLocation } from 'react-router-dom';
+
 const PatientPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [patient, setPatient] = useState<Patient | null>(null);
@@ -13,21 +15,15 @@ const PatientPage: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
+  const location = useLocation();
+  const incomingPatient = (location.state as { patient?: Patient })?.patient;
+
   useEffect(() => {
-    if (!showPrompt && !isLoading && id && !patient) {
-      const fetched: Patient = {
-        id,
-        name: 'Mario Rossi',
-        età: 30,
-        sesso: 'M',
-        peso: 70,
-        altezza: 175,
-        tratti_caratteristici: ['Capelli castani', 'Occhi verdi'],
-        diagnosi: 'Nessuna',
-      };
-      setPatient(fetched);
-    }
-  }, [id, showPrompt, isLoading, patient]);
+    console.log('Incoming patient from state:', incomingPatient);
+  if (incomingPatient && !patient) {
+    setPatient(incomingPatient);
+  }
+}, [incomingPatient, patient]);
 
   const handleLoadData = async () => {
     if (!id) return;
@@ -48,15 +44,39 @@ const PatientPage: React.FC = () => {
     }
   };
 
-  const handleSave = (updated: Patient) => {
-    setPatient(updated);
-    setIsEditing(false);
-  };
+  const handleSave = async (updated: Patient) => {
+  setPatient(updated);
+  setIsEditing(false);
+
+  try {
+    console.log('Salvataggio del paziente:', updated);
+    const token = localStorage.getItem('authToken');
+    console.log('Token:', token);
+    const response = await fetch('/api/users/patient/update', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(updated),
+    });
+
+    if (!response.ok) {
+      throw new Error('Errore durante il salvataggio del paziente');
+    }
+
+    console.log('Paziente aggiornato con successo');
+  } catch (error) {
+    console.error('Errore nella PUT /api/log/editOpen:', error);
+    alert('⚠️ Errore durante il salvataggio del paziente');
+  }
+};
 
   const handleCancel = () => {
     setIsEditing(false);
   };
 
+  
   // BarLoader component
   const BarLoader: React.FC = () => (
     <div style={styles.barLoaderContainer}>
@@ -88,40 +108,28 @@ const PatientPage: React.FC = () => {
     );
   }
 
-  if (showPrompt) {
+  if (!patient && !showPrompt) {
+  return <div style={styles.loading}>Nessun dato paziente disponibile.</div>;
+  }
+  
+  if(!patient){
     return (
       <div style={styles.promptContainer}>
         <div style={styles.promptBox}>
-          <h2>Vuoi caricare gli ultimi dati sul tremore del paziente?</h2>
-          <div style={styles.buttonRow}>
-            <button onClick={() => setShowPrompt(false)} style={styles.button}>
-              No
-            </button>
-            <button
-              onClick={handleLoadData}
-              style={{ ...styles.button, backgroundColor: '#27ae60' }}
-            >
-              Sì
-            </button>
-          </div>
+          <h2>Impossibile caricare i dati del paziente</h2>
         </div>
       </div>
     );
   }
-
-  if (!patient) {
-    return <div style={styles.loading}>Caricamento dati...</div>;
-  }
-
   return (
     <div style={styles.pageContainer}>
       <div style={styles.leftPane}>
         <div style={styles.headerRow}>
-          <h1 style={styles.title}>Dettaglio Paziente: {patient.name}</h1>
+          <h1 style={styles.title}>Dettaglio Paziente: {patient.name} {patient.surname}</h1>
         </div>
         <TremorDashboard />
         <PatientCard patient={patient} />
-        <button style={styles.editButton} onClick={() => setIsEditing(true)}>
+        <button style={styles.editButton} onClick={()=> setIsEditing(true)}>
           Modifica Paziente
         </button>
       </div>

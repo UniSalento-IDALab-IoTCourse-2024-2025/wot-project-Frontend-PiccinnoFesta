@@ -237,8 +237,11 @@ const TremorDashboard: FC = () => {
   };
 
 
-  if (error) return <p style={{ color: 'red' }}>Errore: {error}</p>;
-  if (loading) return <p>Caricamento dati…</p>;
+  if (error) return (
+  <div style={styles.errorContainer}>
+    Impossibile recuperare i dati
+  </div>
+  );  if (loading) return <p>Caricamento dati…</p>;
 
   return (
   <div className="p-4">
@@ -532,4 +535,24 @@ const styles = {
     backgroundColor: '#cddbf7ff', // gray-200
     color: '#374151',
   },
+  errorContainer: {
+  background: 'rgba(255, 255, 255, 0.6)',      // come body
+  border: '1px solid #dbeafe',                 // stesso bordo del container
+  borderRadius: '1.5rem',                      // stesso radius
+  padding: '1.5rem',
+  margin: '1rem auto',
+  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)', // stesso shadow
+  backdropFilter: 'blur(6px)',                // effetto vetro
+  color: '#1f2937',                            // colore testo coerente (scuro)
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  height: '200px',
+  fontSize: '1rem',
+  fontWeight: 500,
+  textAlign: 'center' as const,
+  maxWidth: '950px',
+  width: '100%',
+}
+
 };

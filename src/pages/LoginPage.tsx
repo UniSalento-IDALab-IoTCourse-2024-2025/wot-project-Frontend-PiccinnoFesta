@@ -59,9 +59,9 @@ const LoginPage: React.FC = () => {
       }
 
       const doctorProfile = await profileResponse.json();
-      console.log('Profilo medico ricevuto:', doctorProfile);
-      console.log('Profilo medico:', doctorProfile);
+      
       localStorage.setItem('doctorProfile', JSON.stringify(doctorProfile));
+
 
       // 🔁 Navigazione solo dopo aver ricevuto e salvato il profilo
       navigate('/dashboard');

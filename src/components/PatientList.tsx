@@ -14,13 +14,14 @@ const PatientList: React.FC<PatientListProps> = ({ patients }) => {
       {patients.map((p) => (
         <div
           key={p.id}
-          onClick={() => navigate(`/patient/${p.id}`)}
+          onClick={() => navigate(`/patient/${p.id}`, {state: { patient: p } })}
           style={{
             ...styles.listItem,
             cursor: 'pointer',
           }}
         >
-          <span style={styles.name}>{p.name}</span>
+          <span style={styles.name}>{p.name} {p.surname}</span>
+
           <span
             style={{
               ...styles.status,
@@ -45,8 +46,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     transition: 'background-color 0.2s ease',
   },
   name: {
-    fontSize: '16px',
-  },
+  fontSize: '17px',
+  fontWeight: 450,
+  color: '#2c3e50',
+  letterSpacing: '0.3px',
+},
   status: {
     fontSize: '16px',
   },

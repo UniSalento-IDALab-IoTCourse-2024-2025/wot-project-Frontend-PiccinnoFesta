@@ -1,16 +1,7 @@
 import React, { FC, CSSProperties } from 'react';
 import { User } from 'lucide-react';
+import { Patient } from '../types';
 
-type Sesso = 'M' | 'F' | 'Altro';
-
-export interface Patient {
-  età: number;
-  sesso: Sesso;
-  peso: number;
-  altezza: number;
-  tratti_caratteristici: string[];
-  diagnosi: string;
-}
 
 interface PatientCardProps {
   patient: Patient;
@@ -18,15 +9,17 @@ interface PatientCardProps {
 
 const styles: Record<string, CSSProperties> = {
   container: {
-    width: '90vw',
-    maxWidth: '900px',
-    marginLeft: '2rem',
-    background: 'rgba(240, 248, 255, 0.2)', // molto chiaro
+    width: '100%',
+    maxWidth: '1000px',              // leggermente più largo
+    margin: '1rem auto', 
+    marginLeft: 'auto',
+    background: '#f0f8ff33', // molto chiaro
     border: '1px solid #dbeafe',
     borderRadius: '1.5rem',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
     backdropFilter: 'blur(6px)',
     overflow: 'hidden',
+
   },
   header: {
     background: 'linear-gradient(to right, #bfdbfe, #c7d2fe)', // toni molto soft
@@ -106,26 +99,26 @@ const PatientCard: FC<PatientCardProps> = ({ patient }) => {
         <div style={styles.grid}>
           <div>
             <p style={styles.label}>Età</p>
-            <p style={styles.value}>{patient.età} anni</p>
+            <p style={styles.value}>{patient.age} anni</p>
           </div>
           <div>
             <p style={styles.label}>Sesso</p>
-            <p style={styles.value}>{patient.sesso}</p>
+            <p style={styles.value}>{patient.gender}</p>
           </div>
           <div>
             <p style={styles.label}>Peso</p>
-            <p style={styles.value}>{patient.peso} kg</p>
+            <p style={styles.value}>{patient.weight} kg</p>
           </div>
           <div>
             <p style={styles.label}>Altezza</p>
-            <p style={styles.value}>{patient.altezza} cm</p>
+            <p style={styles.value}>{patient.height} cm</p>
           </div>
         </div>
 
         <div>
           <p style={styles.traitsLabel}>Tratti caratteristici</p>
           <div style={styles.traitsContainer}>
-            {patient.tratti_caratteristici.map((trait, i) => (
+            {patient.traits.map((trait, i) => (
               <span key={i} style={styles.trait}>
                 {trait}
               </span>
@@ -135,7 +128,7 @@ const PatientCard: FC<PatientCardProps> = ({ patient }) => {
 
         <div>
           <p style={styles.diagnosisLabel}>Diagnosi</p>
-          <p style={styles.diagnosis}>{patient.diagnosi}</p>
+          <p style={styles.diagnosis}>{patient.diagnosis}</p>
         </div>
       </div>
     </div>

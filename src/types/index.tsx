@@ -17,16 +17,17 @@ export interface Notification {
   read: boolean;
 
 }
-export type Sesso = 'M' | 'F' | 'Altro';
+export type Sesso = 'MALE' | 'FEMALE' | 'OTHER';
 export interface Patient {
   id: string;
   name: string;
-  età: number;
-  sesso: Sesso;
-  peso: number;       // in kg
-  altezza: number;    // in cm
-  tratti_caratteristici: string[];
-  diagnosi: string;
+  surname: string;
+  age: number;
+  gender: Sesso;
+  weight: number;       // in kg
+  height: number;    // in cm
+  traits: string[];
+  diagnosis: string;
 }
 export interface Doctor{
   id:string,
@@ -35,5 +36,5 @@ export interface Doctor{
   email:string,
   password:string,
   license:string,
-  patient: Patient[];
+  patientIds: string[];
 }
