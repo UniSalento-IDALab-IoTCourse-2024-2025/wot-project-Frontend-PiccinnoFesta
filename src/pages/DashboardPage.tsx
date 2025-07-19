@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { use, useEffect, useState } from 'react';
 import PatientList from '../components/PatientList';
 import Notifications from '../components/Notification';
 import EditPatientForm from '../components/EditPatientForm';
@@ -19,6 +19,10 @@ const DashboardPage: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [doctor, setDoctor] = useState<Doctor | null>(null);
+
+  const [hoveredLogout, setHoveredLogout] = useState(false);
+  const [hoveredAdd, setHoveredAdd] = useState(false);
+  
 
   /**
    * ----------------------------------------------------
@@ -128,6 +132,10 @@ useEffect(() => {
       console.error('Errore durante il salvataggio:', error);
     }
   };
+  //da passare come prop a PatientList
+  const handleDeletePatient = (idToDelete: string) => {
+  setPatients((prev) => prev.filter((p) => p.id !== idToDelete));
+};  
 
 
   const handleLogout = () => {
@@ -152,7 +160,18 @@ useEffect(() => {
         <div style={styles.logo}>PDTrack</div>
         <div style={styles.headerRight}>
           <span style={styles.username}>Dott. {doctor?.surname}</span>
-          <button style={styles.logout} onClick={handleLogout}>Logout</button>          </div>
+          <button
+              style={{
+                ...styles.logout,
+                ...(hoveredLogout && styles.logoutHover),
+              }}
+              onClick={handleLogout}
+              onMouseEnter={() => setHoveredLogout(true)}
+              onMouseLeave={() => setHoveredLogout(false)}
+            >
+              Logout
+            </button>
+          </div>
       </header>
 
       {/* Main */}
@@ -161,10 +180,17 @@ useEffect(() => {
         <section style={styles.leftPane}>
           <h2 style={styles.sectionTitle}>Pazienti</h2>
           <div style={styles.patientListBox}>
-            <PatientList patients={patients} />
-          </div>
+            <PatientList patients={patients} onDelete={handleDeletePatient} />            </div>
           <div style={styles.addCard}>
-            <button style={styles.addButton} onClick={() => setShowForm(true)}>
+            <button
+              style={{
+                ...styles.addButton,
+                ...(hoveredAdd && styles.addButtonHover),
+              }}
+              onClick={() => setShowForm(true)}
+              onMouseEnter={() => setHoveredAdd(true)}
+              onMouseLeave={() => setHoveredAdd(false)}
+            >
               ＋
             </button>
             <p style={styles.addText}>Aggiungi nuovo paziente</p>
@@ -257,6 +283,11 @@ const styles: { [key: string]: React.CSSProperties } = {
   transition: 'transform 0.1s ease, box-shadow 0.2s ease',
   letterSpacing: '0.5px',
 },
+logoutHover: {
+  backgroundColor: '#dc2626', // rosso più scuro per l’hover
+  transform: 'scale(1.04)',
+  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.35)',
+},
   main: {
     display: 'flex',
     flexDirection: 'row',
@@ -310,6 +341,11 @@ const styles: { [key: string]: React.CSSProperties } = {
     transition: 'transform 0.15s ease, box-shadow 0.2s ease',
     boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
   },
+  addButtonHover: {
+  transform: 'scale(1.08)',
+  boxShadow: '0 4px 12px rgba(79, 70, 229, 0.35)', // primaryColor glow
+  backgroundColor: '#4338ca', // colore leggermente più scuro per feedback
+},
   addText: {
     fontSize: '15px',
     color: primaryColor,
