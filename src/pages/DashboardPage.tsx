@@ -7,7 +7,6 @@ import { useNavigate } from 'react-router-dom';
 import logoFrontend from '../assets/images/logoFrontend.png'; 
 import { Info, RefreshCw } from 'lucide-react';
 
-
 interface Notification {
   id: number;
   message: string;
@@ -123,11 +122,11 @@ useEffect(() => {
       console.log('Paziente parsato:', savedPatient);
       if(savedPatient){
       alert(
-        `Paziente salvato con successo.\n` +
-        `ID assegnato: ${savedPatient.id}\n\n` +
-        `Notifica l'identificativo al tecnico per completare l'installazione di PDTrack.\n\n` +
-        `Per visualizzare nuovamente quest'informazione, controlla il pannello per il monitoraggio dei dispositivi non installati.`
-      );
+      `Paziente salvato con successo.\n` +
+      `ID assegnato: ${savedPatient.id}\n\n` +
+      `Notifica l'identificativo al tecnico per completare l'installazione di PDTrack.\n\n` +
+      `Per visualizzare nuovamente quest'informazione, controlla il pannello per il monitoraggio dei dispositivi non installati.`
+    );
       }
 
       setPatients((prev) => [...prev, savedPatient]);

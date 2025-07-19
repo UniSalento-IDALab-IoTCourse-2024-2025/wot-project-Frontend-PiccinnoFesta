@@ -27,6 +27,7 @@ const LoginPage: React.FC = () => {
     });
 
     console.log('Dati di login:', payload);
+    console.log('Risposta del server:', response);
     const text = await response.text();
     let data: any = {};
 
