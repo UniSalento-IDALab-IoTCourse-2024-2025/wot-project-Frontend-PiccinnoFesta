@@ -42,7 +42,7 @@ L'interfaccia web, esposta da un microservizio sul cloud, e sviluppata con React
 - SmartWatchService: [Smartwatch](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-smartwatch-PiccinnoFesta)
 - BLE server: [BLE Server](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-BLEserver-PiccinnoFesta)
 - Frontend: [Frontend](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-Frontend-PiccinnoFesta)
-- Presentation: [Presentation](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-presentation-PiccinnoFesta)
+- Presentation: [Presentation](https://unisalento-idalab-iotcourse-2024-2025.github.io/wot-project-presentation-PiccinnoFesta/)
 
 
 ## Frontend
@@ -69,6 +69,11 @@ Una volta selezionato un paziente, si verrà ridirezionati alla pagina dei suoi 
 
 Qui verranno presentati oltre al grafico in figura, altri riguardanti la *tremor probability* e il flag *arm at rest*, nonchè la scheda clinica del paziente, modificabile.
 
+
+
+Il compito principale del frontend, cioè recuperare le previsioni sul tremore prodotte da Tremor Analisys, viene effettuato interfacciandosi con le
+*Lambda Functions* previste da API GATEWAY. In questo modo si riesce a prelevare dal database un file .zip, aggregato delle previsioni richieste in base al tempo specificato.
+(come si vede in figura, 'ultimo giorno', 'ultima settimana' ecc...)
 
 
 
