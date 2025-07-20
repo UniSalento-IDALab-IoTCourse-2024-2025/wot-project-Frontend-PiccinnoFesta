@@ -49,7 +49,11 @@ const handleUserDeclineInference = () => {
     try {
       const response = await fetch('/api/inference/makeInference', {
         method: 'POST',
-      });
+        headers: {
+          "patientid": id,
+        }
+      }
+    );
       if (!response.ok) {
         throw new Error('Errore nel caricamento dei dati');
       }

@@ -51,9 +51,10 @@ const timeFormatter = (ts: number): string =>
  const formatAdjustedTimestamp = (ts: string): string => {
   const [date, time] = ts.split('T'); 
   const [hh, mm, ss] = time.split('-').map(Number);
-
   const dateObj = new Date(`${date}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}Z`);
-  const shifted = new Date(dateObj.getTime() + 2 * 60 * 60 * 1000);
+
+  // 🔥 Rimuovi lo shift manuale
+  const shifted = dateObj; // NO offset
 
   const yyyy = shifted.getUTCFullYear();
   const MM = String(shifted.getUTCMonth() + 1).padStart(2, '0');
@@ -61,8 +62,14 @@ const timeFormatter = (ts: number): string =>
   const HH = String(shifted.getUTCHours()).padStart(2, '0');
   const min = String(shifted.getUTCMinutes()).padStart(2, '0');
 
+
+  
+
   return `${yyyy}:${MM}:${dd} ${HH}:${min}`;
 };
+
+
+
 
 const formatItalianDate = (isoTimestamp: string): string => {
   const [date, time] = isoTimestamp.split(' ');
@@ -84,6 +91,9 @@ const getTimestampFromRange = (range: string): string => {
   return past.toISOString().replace(/:/g, '-').split('.')[0];
 };
 
+
+
+
 const TremorDashboard: FC<TremorProps> = ({ patientId }) => {
   const [data, setData] = useState<DataPoint[]>([]);
   const [aggData, setAggData] = useState<{ period: string; avg: number }[]>([]);
@@ -103,6 +113,8 @@ const TremorDashboard: FC<TremorProps> = ({ patientId }) => {
     const t = Date.parse(iso);
     return isNaN(t) ? null : t;
   }, [timestamp]);
+
+    const maxTimestamp = data.length ? Math.max(...data.map(d => d.time)) : parsedStart!;
 
   // Initial data load on component mount
   useEffect(() => {
@@ -158,20 +170,31 @@ const TremorDashboard: FC<TremorProps> = ({ patientId }) => {
             const n = meta.rows, m = valSensor.channels.length;
             for (let i = 0; i < n; i++) {
               const rel = tv.getFloat64(i * 8, true);
+              if (i >= n - 10) {
+                console.log(`rel[${i}] = ${rel.toFixed(3)}s`);
+              }
               const t = start + rel * 1000;
               const pt: DataPoint = { time: t };
               valSensor.channels.forEach((ch, j) => {
                 const raw = vv.getFloat64((i * m + j) * 8, true);
                 pt[ch] = raw * (valSensor.scale_factors?.[j] ?? 1);
               });
+            
+
               points.push(pt);
+
+
+              
             }
           } catch (e) {
             console.warn(`Errore parsing ${name}:`, e);
           }
         }
         points.sort((a, b) => a.time - b.time);
-
+        const times = points.map(p => p.time);
+console.log("Max time:", new Date(Math.max(...times)).toLocaleTimeString());
+console.log("Now:", new Date().toLocaleTimeString());
+    
         // 4) padding iniziale/finale
         const endTime = Date.now();
         const zeroFields = { tremor_power: 0, pred_tremor_proba: 0, pred_arm_at_rest: 0 };
@@ -289,17 +312,32 @@ const TremorDashboard: FC<TremorProps> = ({ patientId }) => {
   <div className="p-4">
 <h2 className="text-lg mb-4" style={styles.timestampWrapper}>
   Dati a partire dal:{' '}
-  {timestamp && (
+  {timestamp && (() => {
+  const [datePart, timePart] = timestamp.split('T');
+  const [hh, mm, ss] = timePart.split('-').map(Number);
+  const baseDate = new Date(`${datePart}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}Z`);
+
+  // ➕ Aggiungi 2 ore manualmente
+  const shifted = new Date(baseDate.getTime() + 2 * 60 * 60 * 1000);
+
+  const yyyy = shifted.getUTCFullYear();
+  const MM = String(shifted.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(shifted.getUTCDate()).padStart(2, '0');
+  const HH = String(shifted.getUTCHours()).padStart(2, '0');
+  const min = String(shifted.getUTCMinutes()).padStart(2, '0');
+
+  return (
     <span>
       <span style={styles.datePart}>
-        {formatItalianDate(formatAdjustedTimestamp(timestamp))}
+        {`${dd}/${MM}/${yyyy}`}
       </span>
       , dalle ore:{' '}
       <span style={styles.timePart}>
-        {formatAdjustedTimestamp(timestamp).split(' ')[1]}
+        {`${HH}:${min}`}
       </span>
     </span>
-  )}
+  );
+})()}
 </h2>
 
     <div style={{ marginBottom: '1rem' }}>
@@ -371,7 +409,7 @@ const TremorDashboard: FC<TremorProps> = ({ patientId }) => {
               <XAxis
                 dataKey="time"
                 type="number"
-                domain={[parsedStart!, Date.now()]}
+                domain={['dataMin','dataMax']}
                 tickFormatter={timeFormatter}
                 {...styles.axis}
               />
