@@ -45,4 +45,35 @@ L'interfaccia web, esposta da un microservizio sul cloud, e sviluppata con React
 - Presentation: [Presentation](https://github.com/UniSalento-IDALab-IoTCourse-2024-2025/wot-project-presentation-PiccinnoFesta)
 
 
+## Frontend
+
+L'interfaccia sviluppata, basata su React+Vite, funge da punto di controllo per il medico per la visualizzazione dei suoi pazienti.
+Qui è possibile innanzitutto registrarsi alla piattaforma per ottenere un JWT (JSON Web Token) che verrà riutilizzato durante le successive chiamate.
+Una volta dentro il sistema, l'utente troverà di fronte a sè questa schermata:
+
+
+<div align="center">
+  <img src="img/dashboardPage.png" alt="Dashboard" width="500"/>
+</div>
+
+A sinistra troviamo un elenco dei pazienti registrati nel sistema, con la possibilità di eliminarli se desiderato.
+Troviamo anche un pulsante che permette la compilazione di un form per l'inserimento dei dati relativi ad un nuovo paziente da aggiungere nel sistema.
+Infine sulla destra troviamo una sezione che permette di controllare i pazienti nelle quali abitazioni il dispositivo non sia stato ancora installato, e se necessario, aggiornare quest'informazione.
+
+Una volta selezionato un paziente, si verrà ridirezionati alla pagina dei suoi dettagli e ci verrà chiesto se si vogliono aggiornare i grafici con le rilevazioni più recenti
+
+
+<div align="center">
+  <img src="img/patientPage.png" alt="Dashboard" width="500"/>
+</div>
+
+Qui verranno presentati oltre al grafico in figura, altri riguardanti la *tremor probability* e il flag *arm at rest*, nonchè la scheda clinica del paziente, modificabile.
+
+
+
+
+
+
+
+
 
